@@ -1,0 +1,274 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#101014">
+    <meta name="description" content="Run Ruby at the edge with PicoRuby, WebAssembly, Rack, Sinatra, and Cloudflare Workers.">
+    <title>PicoRuby × Cloudflare Workers</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="stylesheet" href="/styles.css">
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <header class="site-header">
+      <a class="brand" href="#top" aria-label="PicoRuby x Cloudflare Workers home">
+        <span class="brand-mark" aria-hidden="true">P</span>
+        <span>PicoRuby <i>×</i> Workers</span>
+      </a>
+      <nav class="site-nav" aria-label="Primary navigation">
+        <a href="#why" data-i18n="nav.why">Why</a>
+        <a href="#start" data-i18n="nav.start">Start</a>
+        <a href="#rack" data-i18n="nav.rack">Rack &amp; Sinatra</a>
+        <a href="#bindings" data-i18n="nav.bindings">Bindings</a>
+      </nav>
+      <div class="language-switch" role="group" aria-label="Language">
+        <button type="button" data-lang-button="en" aria-pressed="true">EN</button>
+        <button type="button" data-lang-button="ja" aria-pressed="false">日本語</button>
+      </div>
+    </header>
+
+    <main id="main">
+      <section class="hero" id="top">
+        <div class="hero-copy">
+          <p class="eyebrow"><span></span><span data-i18n="hero.eyebrow">A small Ruby runtime for a very large edge</span></p>
+          <h1>
+            <span data-i18n="hero.line1">Ruby at the edge.</span>
+            <em data-i18n="hero.line2">The web you know.</em>
+          </h1>
+          <p class="hero-lede" data-i18n="hero.lede">Write a Rack-style application in PicoRuby. Compile it to WebAssembly. Run it inside Cloudflare Workers, close to every request.</p>
+          <div class="hero-actions">
+            <a class="button button-primary" href="#start"><span data-i18n="hero.cta">Get started</span><span aria-hidden="true">↘</span></a>
+            <a class="button button-ghost" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm" target="_blank" rel="noreferrer"><span>View on GitHub</span><span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+
+        <div class="runtime-card" aria-label="PicoRuby request flow">
+          <div class="runtime-topline">
+            <span>REQUEST /hello</span>
+            <span class="live-dot">EDGE READY</span>
+          </div>
+          <div class="runtime-flow">
+            <div class="runtime-node node-request">
+              <span class="node-index">01</span>
+              <strong>Cloudflare</strong>
+              <small>Request</small>
+            </div>
+            <span class="flow-line"><i></i></span>
+            <div class="runtime-node node-wasm">
+              <span class="node-index">02</span>
+              <strong>Wasm</strong>
+              <small>ABI v3</small>
+            </div>
+            <span class="flow-line"><i></i></span>
+            <div class="runtime-node node-ruby">
+              <span class="node-index">03</span>
+              <strong>PicoRuby</strong>
+              <small>Rack app</small>
+            </div>
+          </div>
+          <pre><code><span class="code-dim">class</span> App
+  <span class="code-dim">def self.</span><span class="code-hot">call</span>(env)
+    [<span class="code-num">200</span>, { <span class="code-str">"content-type"</span> =&gt; <span class="code-str">"text/plain"</span> },
+      [<span class="code-str">"Hello from the edge"</span>]]
+  <span class="code-dim">end</span>
+<span class="code-dim">end</span></code></pre>
+          <div class="runtime-status">
+            <span><i></i> ruby bytecode loaded</span>
+            <span>200 OK&nbsp;&nbsp; · &nbsp;12ms</span>
+          </div>
+        </div>
+
+        <div class="hero-stats" aria-label="Runtime highlights">
+          <div><strong>Rack</strong><span data-i18n="stats.protocol">protocol adapter</span></div>
+          <div><strong>JSPI</strong><span data-i18n="stats.bridge">async host bridge</span></div>
+          <div><strong>Wasm</strong><span data-i18n="stats.runtime">compact runtime</span></div>
+          <div><strong>1 VM</strong><span data-i18n="stats.request">per request</span></div>
+        </div>
+      </section>
+
+      <section class="possibility section-pad" id="why">
+        <p class="section-number">01 — <span data-i18n="why.kicker">THE POSSIBILITY</span></p>
+        <div class="section-heading">
+          <h2 data-i18n="why.title">Ruby ergonomics.<br>Edge-native reach.</h2>
+          <p data-i18n="why.body">PicoRuby brings a compact Ruby implementation to WebAssembly. The adapter connects familiar Ruby application shapes to Cloudflare’s global runtime and request-scoped platform bindings.</p>
+        </div>
+        <div class="possibility-grid">
+          <article>
+            <span class="card-index">A</span>
+            <h3 data-i18n="why.cards.ruby.title">Keep the Ruby shape</h3>
+            <p data-i18n="why.cards.ruby.body">A familiar <code>call(env)</code> entrypoint and a Rack response tuple let application code stay recognizably Ruby.</p>
+          </article>
+          <article>
+            <span class="card-index">B</span>
+            <h3 data-i18n="why.cards.edge.title">Reach the platform</h3>
+            <p data-i18n="why.cards.edge.body">Use D1, KV, R2, Workers AI, Vectorize, Queues, Durable Objects, Access, and Web Crypto from request-scoped Ruby wrappers.</p>
+          </article>
+          <article>
+            <span class="card-index">C</span>
+            <h3 data-i18n="why.cards.small.title">Stay intentionally small</h3>
+            <p data-i18n="why.cards.small.body">Precompiled bytecode, one VM per request, and explicit compatibility boundaries make the runtime understandable and testable.</p>
+          </article>
+        </div>
+      </section>
+
+      <section class="getting-started section-pad" id="start">
+        <p class="section-number">02 — <span data-i18n="start.kicker">GETTING STARTED</span></p>
+        <div class="start-layout">
+          <div class="start-copy">
+            <h2 data-i18n="start.title">One command to a new edge app.</h2>
+            <p data-i18n="start.intro">Install the generator gem and create a minimal Worker project. The CLI writes the Ruby app, build configuration, Worker entrypoint, package manifests, and Wrangler configuration for you.</p>
+            <div class="requirements" aria-label="Prerequisites">
+              <span>Ruby ≥ 3.2</span><span>Node.js</span><span>Emscripten ≥ 5.0.0</span><span>PicoRuby</span>
+            </div>
+            <a class="text-link start-link" href="https://github.com/udzura/picoruby-cloudflare-template" target="_blank" rel="noreferrer"><span data-i18n="start.template">Template &amp; CLI repository</span> <span aria-hidden="true">↗</span></a>
+            <aside class="callout">
+              <strong data-i18n="start.note.title">Need bindings too?</strong>
+              <span data-i18n="start.note.body">Add <code>--bindings</code> when generating to include KV, Queue, Durable Object, and Access examples with their Wrangler declarations.</span>
+            </aside>
+          </div>
+          <div class="terminal" aria-label="Getting started commands">
+            <div class="terminal-bar"><span></span><span></span><span></span><b>quickstart.sh</b></div>
+            <ol>
+              <li><span>01</span><code>gem install picoruby-cloudflare-template</code></li>
+              <li><span>02</span><code>picoruby-cloudflare new hello-edge</code></li>
+              <li><span>03</span><code>cd hello-edge<br>bundle install &amp;&amp; npm install</code></li>
+              <li><span>04</span><code>export PICORUBY_ROOT=/path/to/picoruby<br>npm run dev</code></li>
+            </ol>
+            <div class="terminal-output"><span>❯</span> Ready on <strong>http://localhost:8787</strong></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rack-section section-pad" id="rack">
+        <p class="section-number">03 — <span data-i18n="rack.kicker">RACK &amp; SINATRA</span></p>
+        <div class="rack-intro">
+          <div>
+            <h2 data-i18n="rack.title">A narrow bridge,<br>built on purpose.</h2>
+          </div>
+          <div>
+            <p data-i18n="rack.body">The runtime implements the Rack application protocol—an environment Hash in, a <code>[status, headers, body]</code> tuple out. It is not the complete CRuby Rack distribution.</p>
+            <a class="text-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/rack-compatibility.md" target="_blank" rel="noreferrer"><span data-i18n="rack.compat">Read the compatibility contract</span> <span aria-hidden="true">↗</span></a>
+          </div>
+        </div>
+        <div class="rack-workbench">
+          <div class="code-tabs" role="tablist" aria-label="Ruby framework examples">
+            <button type="button" role="tab" aria-selected="true" data-code-tab="rack">Rack style</button>
+            <button type="button" role="tab" aria-selected="false" data-code-tab="sinatra">Sinatra 4.2.1</button>
+          </div>
+          <div class="code-panel" data-code-panel="rack">
+            <pre><code><span class="syntax-purple">class</span> App
+  <span class="syntax-purple">def</span> <span class="syntax-blue">self.call</span>(env)
+    name = env[<span class="syntax-red">"PATH_INFO"</span>].split(<span class="syntax-red">"/"</span>).last
+    [<span class="syntax-orange">200</span>,
+      { <span class="syntax-red">"content-type"</span> =&gt; <span class="syntax-red">"text/plain"</span> },
+      [<span class="syntax-red">"Hello, #{name}!"</span>]]
+  <span class="syntax-purple">end</span>
+<span class="syntax-purple">end</span>
+
+Rackup::Handler::CloudflareWorker.run(App)</code></pre>
+          </div>
+          <div class="code-panel" data-code-panel="sinatra" hidden>
+            <pre><code><span class="syntax-purple">class</span> App &lt; Sinatra::Base
+  get <span class="syntax-red">"/hello/:name"</span> <span class="syntax-purple">do</span>
+    content_type <span class="syntax-red">"text/plain"</span>
+    <span class="syntax-red">"Hello, #{params[:name]} from PicoRuby"</span>
+  <span class="syntax-purple">end</span>
+<span class="syntax-purple">end</span>
+
+Rackup::Handler::CloudflareWorker.run(App)</code></pre>
+          </div>
+          <div class="support-matrix">
+            <div class="matrix-head"><span data-i18n="rack.matrix.title">Runtime contract</span><b data-i18n="rack.matrix.status">CURRENT</b></div>
+            <dl>
+              <div><dt data-i18n="rack.matrix.input">Buffered request bodies</dt><dd class="yes" data-i18n="rack.matrix.supported">Supported</dd></div>
+              <div><dt data-i18n="rack.matrix.headers">Headers &amp; cookies</dt><dd class="yes" data-i18n="rack.matrix.supported">Supported</dd></div>
+              <div><dt>Sinatra routing</dt><dd class="yes" data-i18n="rack.matrix.profile">Compatibility profile</dd></div>
+              <div><dt data-i18n="rack.matrix.hoststreams">Host-owned AI / R2 streams</dt><dd class="yes" data-i18n="rack.matrix.supported">Supported</dd></div>
+              <div><dt>config.ru / Rack::Builder</dt><dd class="no" data-i18n="rack.matrix.notserver">Not provided by server</dd></div>
+              <div><dt data-i18n="rack.matrix.rubystreams">Ruby-generated streaming</dt><dd class="no" data-i18n="rack.matrix.future">Future work</dd></div>
+            </dl>
+            <p data-i18n="rack.matrix.note">The Sinatra profile intentionally disables sessions, rack-protection, logging middleware, static files, templates, and development reloading.</p>
+          </div>
+        </div>
+      </section>
+
+      <section class="bindings-section section-pad" id="bindings">
+        <p class="section-number">04 — <span data-i18n="bindings.kicker">CLOUDFLARE BINDINGS</span></p>
+        <div class="bindings-heading">
+          <h2 data-i18n="bindings.title">Platform primitives,<br>Ruby syntax.</h2>
+          <p data-i18n="bindings.body">Bindings stay in the Worker <code>env</code>. The request receives typed Ruby wrappers through <code>env["cloudflare.env"]</code>, with asynchronous calls bridged by JSPI.</p>
+        </div>
+        <div class="binding-explorer">
+          <div class="binding-list" role="tablist" aria-label="Cloudflare integration examples">
+            <button type="button" role="tab" aria-selected="true" data-binding="d1"><span><i>01</i>D1</span><b data-i18n="binding.d1.label">Prepared SQL</b></button>
+            <button type="button" role="tab" aria-selected="false" data-binding="ai"><span><i>02</i>Workers AI</span><b data-i18n="binding.ai.label">Inference &amp; streams</b></button>
+            <button type="button" role="tab" aria-selected="false" data-binding="r2"><span><i>03</i>R2</span><b data-i18n="binding.r2.label">Objects &amp; streams</b></button>
+            <button type="button" role="tab" aria-selected="false" data-binding="kv"><span><i>04</i>Workers KV</span><b data-i18n="binding.kv.label">Edge key-value</b></button>
+          </div>
+          <div class="binding-stage">
+            <div class="binding-meta">
+              <span data-binding-kind>DATABASE</span>
+              <a data-binding-link href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-d1.md" target="_blank" rel="noreferrer"><span data-i18n="bindings.api">API details</span> ↗</a>
+            </div>
+            <h3 data-binding-title>Prepare. Bind. Run.</h3>
+            <p data-binding-description>Keep SQL and values separate with an explicit prepared-statement flow.</p>
+            <pre><code data-binding-code></code></pre>
+          </div>
+        </div>
+
+        <div class="more-bindings">
+          <article><span>VECTORIZE</span><h3 data-i18n="more.vector.title">Semantic search</h3><p data-i18n="more.vector.body">Query, insert, upsert, inspect, and delete vectors using JSON-compatible values.</p></article>
+          <article><span>QUEUES</span><h3 data-i18n="more.queue.title">Producers &amp; consumers</h3><p data-i18n="more.queue.body">Send UTF-8 messages and process batches with ack, retry, and Rack-style middleware.</p></article>
+          <article><span>DURABLE OBJECTS</span><h3 data-i18n="more.do.title">JSON object state</h3><p data-i18n="more.do.body">Store JSON-compatible POJOs in named Durable Object instances.</p></article>
+          <article><span>ACCESS</span><h3 data-i18n="more.access.title">Identity middleware</h3><p data-i18n="more.access.body">Resolve Cloudflare Access identity and place it in the Rack environment.</p></article>
+          <article><span>WEB CRYPTO</span><h3 data-i18n="more.crypto.title">Secure randomness</h3><p data-i18n="more.crypto.body">Use Web Crypto-backed random bytes and AES-GCM instead of pseudo-randomness.</p></article>
+          <article><span>FETCH + ENV</span><h3 data-i18n="more.fetch.title">Native host access</h3><p data-i18n="more.fetch.body">Make buffered HTTP calls and read variables or secrets from request scope.</p></article>
+        </div>
+      </section>
+
+      <section class="examples-section section-pad" id="examples">
+        <p class="section-number">05 — <span data-i18n="examples.kicker">EXAMPLES</span></p>
+        <div class="examples-heading">
+          <h2 data-i18n="examples.title">See the pieces<br>working together.</h2>
+          <p data-i18n="examples.body">The repository includes runnable applications that combine PicoRuby, Sinatra, Static Assets, and Cloudflare resources.</p>
+        </div>
+        <div class="example-grid">
+          <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/d1-todo" target="_blank" rel="noreferrer">
+            <div class="example-visual visual-d1"><span>POST</span><strong>/api/todos</strong><i>201</i></div>
+            <span class="example-tag">SINATRA + D1</span><h3 data-i18n="examples.d1.title">Todo API &amp; frontend</h3><p data-i18n="examples.d1.body">Static Assets serves the UI; the Worker routes <code>/api/*</code> to Sinatra and D1.</p>
+          </a>
+          <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/ai-stream" target="_blank" rel="noreferrer">
+            <div class="example-visual visual-ai"><span>event: delta</span><b></b><b></b><b></b></div>
+            <span class="example-tag">SINATRA + WORKERS AI</span><h3 data-i18n="examples.ai.title">Incremental AI stream</h3><p data-i18n="examples.ai.body">Pass a host-owned SSE stream straight to the browser, including cancellation.</p>
+          </a>
+          <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/rag-stream" target="_blank" rel="noreferrer">
+            <div class="example-visual visual-rag"><span>AI</span><i>←</i><span>VECTOR</span><i>←</i><span>RUBY</span></div>
+            <span class="example-tag">AI + VECTORIZE</span><h3 data-i18n="examples.rag.title">Streaming RAG</h3><p data-i18n="examples.rag.body">Embed documents, retrieve sources, and stream a grounded answer with citations.</p>
+          </a>
+        </div>
+      </section>
+
+      <section class="links-section section-pad" id="links">
+        <div class="links-lead">
+          <p class="section-number">06 — <span data-i18n="links.kicker">KEEP EXPLORING</span></p>
+          <h2 data-i18n="links.title">Small runtime.<br>Open road.</h2>
+        </div>
+        <div class="link-list">
+          <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm" target="_blank" rel="noreferrer"><span><i>01</i><b data-i18n="links.repo">Worker runtime repository</b></span><em>GitHub ↗</em></a>
+          <a href="https://github.com/picoruby/picoruby" target="_blank" rel="noreferrer"><span><i>02</i><b data-i18n="links.picoruby">PicoRuby project</b></span><em>GitHub ↗</em></a>
+          <a href="https://developers.cloudflare.com/workers/" target="_blank" rel="noreferrer"><span><i>03</i><b>Cloudflare Workers</b></span><em>Docs ↗</em></a>
+          <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/docs" target="_blank" rel="noreferrer"><span><i>04</i><b data-i18n="links.apis">Ruby binding references</b></span><em>Docs ↗</em></a>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <a class="brand" href="#top"><span class="brand-mark" aria-hidden="true">P</span><span>PicoRuby <i>×</i> Workers</span></a>
+      <p data-i18n="footer.note">An experimental, open-source bridge between PicoRuby and Cloudflare Workers.</p>
+      <a href="#top"><span data-i18n="footer.top">Back to top</span> ↑</a>
+    </footer>
+
+    <script src="/app.js" defer></script>
+  </body>
+</html>
