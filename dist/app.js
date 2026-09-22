@@ -1,6 +1,6 @@
 const messages = {
   en: {
-    "nav.why": "Why", "nav.start": "Start", "nav.rack": "Rack & Sinatra", "nav.bindings": "Bindings",
+    "nav.why": "Why", "nav.start": "Start", "nav.rack": "Rack & Sinatra", "nav.bindings": "Binding guide",
     "hero.eyebrow": "A small Ruby runtime for a very large edge", "hero.line1": "Ruby at the edge.", "hero.line2": "The web you know.",
     "hero.lede": "Write a Rack-style application in PicoRuby. Compile it to WebAssembly. Run it inside Cloudflare Workers, close to every request.", "hero.cta": "Get started",
     "stats.protocol": "protocol adapter", "stats.bridge": "async host bridge", "stats.runtime": "compact runtime", "stats.request": "per request",
@@ -20,7 +20,7 @@ const messages = {
     "rack.matrix.note": "The Sinatra profile intentionally disables sessions, rack-protection, logging middleware, static files, templates, and development reloading.",
     "bindings.kicker": "CLOUDFLARE BINDINGS", "bindings.title": "Platform primitives,<br>Ruby syntax.",
     "bindings.body": "Bindings stay in the Worker <code>env</code>. The request receives typed Ruby wrappers through <code>env[\"cloudflare.env\"]</code>, with asynchronous calls bridged by JSPI.",
-    "bindings.api": "API details", "binding.d1.label": "Prepared SQL", "binding.ai.label": "Inference & streams", "binding.r2.label": "Objects & streams", "binding.kv.label": "Edge key-value",
+    "bindings.api": "API details", "bindings.guide": "Open the complete binding guide", "binding.d1.label": "Prepared SQL", "binding.ai.label": "Inference & streams", "binding.r2.label": "Objects & streams", "binding.kv.label": "Edge key-value",
     "more.vector.title": "Semantic search", "more.vector.body": "Query, insert, upsert, inspect, and delete vectors using JSON-compatible values.",
     "more.queue.title": "Producers & consumers", "more.queue.body": "Send UTF-8 messages and process batches with ack, retry, and Rack-style middleware.",
     "more.do.title": "JSON object state", "more.do.body": "Store JSON-compatible POJOs in named Durable Object instances.",
@@ -32,11 +32,11 @@ const messages = {
     "examples.d1.title": "Todo API & frontend", "examples.d1.body": "Static Assets serves the UI; the Worker routes <code>/api/*</code> to Sinatra and D1.",
     "examples.ai.title": "Incremental AI stream", "examples.ai.body": "Pass a host-owned SSE stream straight to the browser, including cancellation.",
     "examples.rag.title": "Streaming RAG", "examples.rag.body": "Embed documents, retrieve sources, and stream a grounded answer with citations.",
-    "links.kicker": "KEEP EXPLORING", "links.title": "Small runtime.<br>Open road.", "links.repo": "Worker runtime repository", "links.picoruby": "PicoRuby project", "links.apis": "Ruby binding references",
+    "links.kicker": "KEEP EXPLORING", "links.title": "Small runtime.<br>Open road.", "links.repo": "Worker runtime repository", "links.picoruby": "PicoRuby project", "links.apis": "Ruby binding references", "links.guide": "Guide ↗",
     "footer.note": "An experimental, open-source bridge between PicoRuby and Cloudflare Workers.", "footer.top": "Back to top"
   },
   ja: {
-    "nav.why": "可能性", "nav.start": "はじめ方", "nav.rack": "Rack & Sinatra", "nav.bindings": "連携機能",
+    "nav.why": "可能性", "nav.start": "はじめ方", "nav.rack": "Rack & Sinatra", "nav.bindings": "Bindingガイド",
     "hero.eyebrow": "小さな Ruby ランタイムを、大きなエッジへ", "hero.line1": "Rubyで、<br>エッジで、", "hero.line2": "いつものWeb開発。",
     "hero.lede": "Rack スタイルのアプリを PicoRuby で書き、WebAssembly へコンパイル。Cloudflare Workers 上で、リクエストのすぐそばで実行します。", "hero.cta": "はじめる",
     "stats.protocol": "プロトコルアダプタ", "stats.bridge": "非同期ホストブリッジ", "stats.runtime": "コンパクトなランタイム", "stats.request": "1リクエストごと",
@@ -56,7 +56,7 @@ const messages = {
     "rack.matrix.note": "Sinatra 互換プロファイルは、sessions、rack-protection、ロギングミドルウェア、Static Files、template、development reload を意図的に無効化しています。",
     "bindings.kicker": "CLOUDFLARE 連携", "bindings.title": "プラットフォームの機能を、<br>Ruby の構文で。",
     "bindings.body": "バインディングは Worker の <code>env</code> に保持されます。リクエストは <code>env[\"cloudflare.env\"]</code> 経由で型付き Ruby ラッパーを受け取り、非同期呼び出しは JSPI が中継します。",
-    "bindings.api": "API 詳細", "binding.d1.label": "プリペアド SQL", "binding.ai.label": "推論とストリーム", "binding.r2.label": "オブジェクトとストリーム", "binding.kv.label": "エッジ KV",
+    "bindings.api": "API 詳細", "bindings.guide": "bindingガイドを開く", "binding.d1.label": "プリペアド SQL", "binding.ai.label": "推論とストリーム", "binding.r2.label": "オブジェクトとストリーム", "binding.kv.label": "エッジ KV",
     "more.vector.title": "セマンティック検索", "more.vector.body": "JSON 互換の値でベクトルを検索、追加、更新、参照、削除できます。",
     "more.queue.title": "プロデューサとコンシューマ", "more.queue.body": "UTF-8 メッセージを送信し、ack、retry、Rack スタイルのミドルウェアでバッチを処理します。",
     "more.do.title": "JSON オブジェクト状態", "more.do.body": "名前付き Durable Object インスタンスに JSON 互換 POJO を保存します。",
@@ -68,7 +68,7 @@ const messages = {
     "examples.d1.title": "Todo API とフロントエンド", "examples.d1.body": "Static Assets が UI を配信し、Worker が <code>/api/*</code> を Sinatra と D1 へルーティングします。",
     "examples.ai.title": "インクリメンタル AI ストリーム", "examples.ai.body": "ホスト所有の SSE ストリームをキャンセル対応のままブラウザへ渡します。",
     "examples.rag.title": "ストリーミング RAG", "examples.rag.body": "文書を埋め込み、ソースを検索し、引用付きの回答をストリームします。",
-    "links.kicker": "もっと見る", "links.title": "小さなランタイム。<br>大きなこれから。", "links.repo": "Worker ランタイムのリポジトリ", "links.picoruby": "PicoRuby プロジェクト", "links.apis": "Ruby バインディングリファレンス",
+    "links.kicker": "もっと見る", "links.title": "小さなランタイム。<br>大きなこれから。", "links.repo": "Worker ランタイムのリポジトリ", "links.picoruby": "PicoRuby プロジェクト", "links.apis": "Ruby バインディングリファレンス", "links.guide": "ガイド ↗",
     "footer.note": "PicoRuby と Cloudflare Workers をつなぐ、実験的なオープンソースブリッジ。", "footer.top": "ページ先頭へ"
   }
 };
@@ -140,6 +140,7 @@ function currentLanguage() {
 }
 
 function updateBinding(name) {
+  if (!document.querySelector("[data-binding-kind]")) return;
   activeBinding = bindingData[name] ? name : "d1";
   const data = bindingData[activeBinding];
   const lang = currentLanguage();
@@ -166,6 +167,7 @@ function setLanguage(lang) {
   });
   localStorage.setItem("site-language", next);
   updateBinding(activeBinding);
+  document.dispatchEvent(new CustomEvent("site-language-change", { detail: { language: next } }));
 }
 
 document.querySelectorAll("[data-lang-button]").forEach((button) => {
@@ -180,9 +182,7 @@ document.querySelectorAll("[data-code-tab]").forEach((button) => {
   });
 });
 
-document.querySelectorAll("[data-binding]").forEach((button) => {
-  button.addEventListener("click", () => updateBinding(button.dataset.binding));
-});
+document.querySelectorAll("[data-binding]").forEach((button) => button.addEventListener("click", () => updateBinding(button.dataset.binding)));
 
 const savedLanguage = localStorage.getItem("site-language");
 const preferredLanguage = navigator.language.startsWith("ja") ? "ja" : "en";

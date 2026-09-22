@@ -11,6 +11,9 @@ python3 -m http.server 4173 --directory dist
 
 Open <http://localhost:4173/>.
 
+The landing page links to the bilingual [binding guide](http://localhost:4173/bindings.html),
+which is also available directly at `/bindings.html` after deployment.
+
 ## Deploy to Cloudflare Pages
 
 For a Git-integrated Pages project, use:

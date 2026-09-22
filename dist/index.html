@@ -20,7 +20,7 @@
         <a href="#why" data-i18n="nav.why">Why</a>
         <a href="#start" data-i18n="nav.start">Start</a>
         <a href="#rack" data-i18n="nav.rack">Rack &amp; Sinatra</a>
-        <a href="#bindings" data-i18n="nav.bindings">Bindings</a>
+        <a href="/bindings.html" data-i18n="nav.bindings">Binding guide</a>
       </nav>
       <div class="language-switch" role="group" aria-label="Language">
         <button type="button" data-lang-button="en" aria-pressed="true">EN</button>
@@ -199,6 +199,7 @@ Rackup::Handler::CloudflareWorker.run(App)</code></pre>
           <h2 data-i18n="bindings.title">Platform primitives,<br>Ruby syntax.</h2>
           <p data-i18n="bindings.body">Bindings stay in the Worker <code>env</code>. The request receives typed Ruby wrappers through <code>env["cloudflare.env"]</code>, with asynchronous calls bridged by JSPI.</p>
         </div>
+        <a class="text-link binding-guide-link" href="/bindings.html"><span data-i18n="bindings.guide">Open the complete binding guide</span> <span aria-hidden="true">↗</span></a>
         <div class="binding-explorer">
           <div class="binding-list" role="tablist" aria-label="Cloudflare integration examples">
             <button type="button" role="tab" aria-selected="true" data-binding="d1"><span><i>01</i>D1</span><b data-i18n="binding.d1.label">Prepared SQL</b></button>
@@ -258,7 +259,7 @@ Rackup::Handler::CloudflareWorker.run(App)</code></pre>
           <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm" target="_blank" rel="noreferrer"><span><i>01</i><b data-i18n="links.repo">Worker runtime repository</b></span><em>GitHub ↗</em></a>
           <a href="https://github.com/picoruby/picoruby" target="_blank" rel="noreferrer"><span><i>02</i><b data-i18n="links.picoruby">PicoRuby project</b></span><em>GitHub ↗</em></a>
           <a href="https://developers.cloudflare.com/workers/" target="_blank" rel="noreferrer"><span><i>03</i><b>Cloudflare Workers</b></span><em>Docs ↗</em></a>
-          <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/docs" target="_blank" rel="noreferrer"><span><i>04</i><b data-i18n="links.apis">Ruby binding references</b></span><em>Docs ↗</em></a>
+          <a href="/bindings.html"><span><i>04</i><b data-i18n="links.apis">Ruby binding references</b></span><em data-i18n="links.guide">Guide ↗</em></a>
         </div>
       </section>
     </main>
