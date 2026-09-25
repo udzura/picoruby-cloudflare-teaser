@@ -4,12 +4,19 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#101014">
-    <meta name="description" content="A practical reference for PicoRuby Cloudflare Worker bindings.">
-    <title>Binding guide · PicoRuby × Cloudflare Workers</title>
+    <meta name="description" content="Reference for the Cloudflare bindings available to PicoRuby on Cloudflare Workers: configuration, examples, method signatures, and limits.">
+    <title>Bindings reference · PicoRuby × Cloudflare Workers</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="/styles.css">
+    <script>
+      // Pick the language before first paint so the page does not flash the other one.
+      try {
+        const lang = localStorage.getItem("site-language") || navigator.language;
+        document.documentElement.lang = document.documentElement.dataset.lang = lang.startsWith("ja") ? "ja" : "en";
+      } catch {}
+    </script>
   </head>
-  <body class="guide-page">
+  <body class="ref-page">
     <a class="skip-link" href="#main">Skip to content</a>
     <header class="site-header">
       <a class="brand" href="/" aria-label="PicoRuby x Cloudflare Workers home">
@@ -29,189 +36,1232 @@
     </header>
 
     <main id="main">
-      <section class="guide-hero">
-        <div>
-          <p class="eyebrow"><span></span><span data-guide-i18n="hero.kicker">PicoRuby × Cloudflare Workers</span></p>
-          <h1 data-guide-i18n="hero.title">Bindings reference.</h1>
-          <p data-guide-i18n="hero.lede">Examples and API boundaries for the Cloudflare bindings available from PicoRuby.</p>
-          <nav class="guide-quick-toc" aria-label="Binding topics">
-            <p data-guide-i18n="toc.title">BINDINGS</p>
-            <div>
-              <a href="#environment" data-guide-i18n="toc.environment">Environment &amp; values</a>
-              <a href="#d1">D1</a><a href="#kv">Workers KV</a><a href="#r2">R2</a>
-              <a href="#ai">Workers AI</a><a href="#vectorize">Vectorize</a>
-              <a href="#queues">Queues</a><a href="#durable-objects">Durable Objects</a>
-              <a href="#access">Access</a><a href="#fetch-crypto" data-guide-i18n="toc.fetch">Fetch &amp; Web Crypto</a>
-            </div>
-          </nav>
+      <section class="ref-hero">
+        <p class="eyebrow"><span></span><span>PICORUBY × CLOUDFLARE WORKERS — REFERENCE</span></p>
+        <h1><span lang="en">Bindings reference</span><span lang="ja">バインディング<br>リファレンス</span></h1>
+        <p class="ref-hero-lede">
+          <span lang="en">Everything you need to use D1, KV, R2, Workers AI, Vectorize, Queues, Durable Objects, Access, fetch, and Web Crypto from PicoRuby: how to configure each binding, working code, method signatures, and the exact limits of the current runtime.</span>
+          <span lang="ja">PicoRuby から D1、KV、R2、Workers AI、Vectorize、Queues、Durable Objects、Access、fetch、Web Crypto を使うためのリファレンスです。バインディングごとの設定方法、動くコード例、メソッドのシグネチャ、現行ランタイムの制約をまとめています。</span>
+        </p>
+        <div class="ref-hero-meta">
+          <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/d8ae1d5bd8af857ae1604eeca98d2dcc9aa4bf6e" target="_blank" rel="noreferrer">picoruby-cloudflare-worker-wasm @ d8ae1d5 ↗</a>
+          <span><span lang="en">Reflects the runtime as of 2026-09-23</span><span lang="ja">2026-09-23 時点のランタイムに準拠</span></span>
         </div>
       </section>
 
-      <section class="guide-intro section-pad">
-        <p class="section-number">01 — <span data-guide-i18n="intro.kicker">THE SHAPE</span></p>
-        <div class="guide-intro-grid">
-          <h2 data-guide-i18n="intro.title">The request owns<br>the connection.</h2>
-          <div>
-            <p data-guide-i18n="intro.body">Every Rack request receives a <code>Cloudflare::Environment</code> proxy at <code>env["cloudflare.env"]</code>. It resolves typed resource wrappers against the current Worker <code>env</code>; it is not a Ruby pointer to a JavaScript object.</p>
-            <p data-guide-i18n="intro.note">Text variables and secrets use <code>ENV</code>. Resource bindings such as KV, D1, AI, or R2 do not.</p>
+      <div class="ref-shell">
+        <nav class="ref-nav" aria-label="Reference sections">
+          <div class="ref-nav-group">
+            <p><span lang="en">Foundations</span><span lang="ja">基本</span></p>
+            <a href="#overview"><span lang="en">Overview</span><span lang="ja">概要</span></a>
+            <a href="#setup"><span lang="en">Adding a binding</span><span lang="ja">バインディングの追加</span></a>
+            <a href="#environment"><span lang="en">Environment &amp; ENV</span><span lang="ja">環境と ENV</span></a>
+            <a href="#errors"><span lang="en">Errors</span><span lang="ja">エラー</span></a>
+            <a href="#streams"><span lang="en">Streams &amp; bodies</span><span lang="ja">ストリームとボディ</span></a>
           </div>
-        </div>
-        <div class="guide-principles">
-          <article><span>01</span><h3 data-guide-i18n="principle.request.title">Request-scoped</h3><p data-guide-i18n="principle.request.body">Wrappers resolve against the current Worker environment and are cached only for that Rack request.</p></article>
-          <article><span>02</span><h3 data-guide-i18n="principle.typed.title">Typed by config</h3><p data-guide-i18n="principle.typed.body">The generated registry reads declared binding types. The runtime never guesses a resource from its methods.</p></article>
-          <article><span>03</span><h3 data-guide-i18n="principle.async.title">Sync-looking Ruby</h3><p data-guide-i18n="principle.async.body">Promise-backed host operations cross the Wasm boundary through JSPI and resume the same Ruby stack.</p></article>
-        </div>
-      </section>
+          <div class="ref-nav-group">
+            <p><span lang="en">Data</span><span lang="ja">データ</span></p>
+            <a href="#d1">D1</a>
+            <a href="#kv">Workers KV</a>
+            <a href="#r2">R2</a>
+          </div>
+          <div class="ref-nav-group">
+            <p>AI</p>
+            <a href="#ai">Workers AI</a>
+            <a href="#vectorize">Vectorize</a>
+          </div>
+          <div class="ref-nav-group">
+            <p><span lang="en">Messaging &amp; state</span><span lang="ja">メッセージと状態</span></p>
+            <a href="#queues">Queues</a>
+            <a href="#durable-objects">Durable Objects</a>
+          </div>
+          <div class="ref-nav-group">
+            <p><span lang="en">Identity &amp; host APIs</span><span lang="ja">認証とホスト API</span></p>
+            <a href="#access">Access</a>
+            <a href="#fetch">Fetch</a>
+            <a href="#crypto">Web Crypto</a>
+          </div>
+        </nav>
 
-      <section class="guide-layout section-pad">
-        <div class="guide-content">
-          <article class="guide-card guide-card-dark" id="environment">
-            <div class="guide-card-heading"><span>01 / FOUNDATION</span><h2 data-guide-i18n="environment.title">Environment values and named resources</h2><p data-guide-i18n="environment.body">Reach declared resources from the proxy. Use <code>ENV</code> for Worker text values and secrets only; writing to it creates a request-local Ruby overlay and does not mutate Cloudflare.</p></div>
-            <pre><code>cloudflare = env["cloudflare.env"]
+        <div class="ref-main">
 
-cache = cloudflare.CACHE_KV       <span class="guide-comment"># Cloudflare::KV</span>
-database = cloudflare.DB          <span class="guide-comment"># Cloudflare::D1</span>
-ai = cloudflare.AI                <span class="guide-comment"># Cloudflare::AI</span>
+          <!-- ============================== OVERVIEW ============================== -->
+          <section class="ref-section" id="overview">
+            <p class="ref-kicker">FOUNDATIONS</p>
+            <h2><span lang="en">How bindings reach Ruby</span><span lang="ja">バインディングが Ruby に届くまで</span></h2>
+            <p class="ref-lede" lang="en">Cloudflare bindings stay inside the Worker's JavaScript <code>env</code> object; PicoRuby never holds a pointer to them. Each Rack request instead receives a <code>Cloudflare::Environment</code> proxy at <code>env["cloudflare.env"]</code>, which turns a binding name into a small Ruby wrapper. Calling a method on the wrapper serializes the arguments, awaits the Worker API in JavaScript, and resumes Ruby with the result.</p>
+            <p class="ref-lede" lang="ja">Cloudflare のバインディングは Worker（JavaScript）側の <code>env</code> オブジェクトに置かれたままで、PicoRuby がそのポインタを持つことはありません。各 Rack リクエストには <code>env["cloudflare.env"]</code> に <code>Cloudflare::Environment</code> プロキシが渡され、バインディング名を小さな Ruby ラッパーに変換します。ラッパーのメソッドを呼ぶと引数がシリアライズされ、JavaScript 側で Worker API を待ち、その結果を持って Ruby の実行が再開します。</p>
 
-api_url = ENV["API_URL"]         <span class="guide-comment"># variable or secret</span>
-same_cache = Cloudflare::KV.from_env(env, "CACHE_KV")</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="environment.limit">Unknown resource names return nil through <code>[]</code>; property syntax raises <code>NoMethodError</code>. A missing or wrong typed explicit resource raises <code>Cloudflare::BindingError</code>.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-env.md" target="_blank" rel="noreferrer">cloudflare-env.md ↗</a>
-          </article>
+            <ol class="ref-flow">
+              <li><code>wrangler.jsonc</code><span lang="en">Declare the binding and its name.</span><span lang="ja">バインディングと名前を宣言する。</span></li>
+              <li><code>npm run build</code><span lang="en">A binding-type registry is generated from the config.</span><span lang="ja">設定から型のレジストリが生成される。</span></li>
+              <li><code>env["cloudflare.env"].NAME</code><span lang="en">The proxy returns a typed Ruby wrapper.</span><span lang="ja">プロキシが型付きの Ruby ラッパーを返す。</span></li>
+              <li><code>JSPI</code><span lang="en">Ruby suspends while the Worker API runs, then resumes.</span><span lang="ja">Worker API の実行中は Ruby が中断し、完了後に再開する。</span></li>
+            </ol>
 
-          <article class="guide-card" id="d1">
-            <div class="guide-card-heading"><span>02 / DATA</span><h2>Cloudflare D1</h2><p data-guide-i18n="d1.body">D1 exposes prepared statements. Build a statement with <code>prepare</code>, derive a bound one with <code>bind</code>, then choose a terminal operation such as <code>run</code>, <code>rows</code>, or <code>first</code>.</p></div>
-            <pre><code>db = env["cloudflare.env"].DB
-statement = db.prepare("SELECT id, name FROM users WHERE id = ?1")
+            <h3><span lang="en">A complete example</span><span lang="ja">最小の完全な例</span></h3>
+            <p lang="en">A Rack application that counts visits in KV. There is no <code>require</code> and no client to set up — the binding name in <code>wrangler.jsonc</code> is the only link between configuration and code.</p>
+            <p lang="ja">KV で訪問回数を数える Rack アプリです。<code>require</code> もクライアントの初期化も不要で、<code>wrangler.jsonc</code> のバインディング名だけが設定とコードを結びつけます。</p>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "kv_namespaces": [
+    { "binding": "CACHE_KV", "id": "&lt;namespace-id&gt;" }
+  ]
+}</code></pre></figure>
+            <figure class="ref-code"><figcaption>app.rb — Rack</figcaption><pre><code data-code="ruby">class App
+  def self.call(env)
+    kv = env["cloudflare.env"].CACHE_KV
 
-user = statement.bind(1).first
-created = db
-  .prepare("INSERT INTO users (name) VALUES (?1)")
-  .bind("Alice")
-  .run</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="d1.limit">Parameters are scalar JSON values only: nil, String, Integer, finite Float, true, or false. Query builders, Ruby transaction blocks, BLOB parameters, and D1 Sessions are outside the current API.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-d1.md" target="_blank" rel="noreferrer">cloudflare-d1.md ↗</a>
-          </article>
+    count = (kv.get("visits") || "0").to_i + 1
+    kv.put("visits", count.to_s)
 
-          <article class="guide-card guide-card-dark" id="kv">
-            <div class="guide-card-heading"><span>03 / DATA</span><h2>Workers KV</h2><p data-guide-i18n="kv.body">Use a named namespace for binary-safe reads and writes. The optional <code>ttl:</code> maps to the Worker API’s relative expiration.</p></div>
-            <pre><code>cache = env["cloudflare.env"].CACHE_KV
-
-cache.put("greeting", "Hello from PicoRuby", ttl: 300)
-value = cache.get("greeting")
-
-[200, { "content-type" =&gt; "text/plain" },
-  [value || "missing"]]</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="kv.limit">Only <code>get</code> and <code>put</code> are exposed today. TTL must be at least 60 seconds; values are capped at 8 MiB at the Wasm boundary.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-kv.md" target="_blank" rel="noreferrer">cloudflare-kv.md ↗</a>
-          </article>
-
-          <article class="guide-card" id="r2">
-            <div class="guide-card-heading"><span>04 / OBJECTS</span><h2>R2</h2><p data-guide-i18n="r2.body">Put Ruby Strings as raw bytes, inspect objects, list and delete keys, or return an original R2 body as a host-owned Worker stream.</p></div>
-            <pre><code>bucket = env["cloudflare.env"].BUCKET
-object = bucket.get("report.pdf")
-
-return [404, { "content-type" =&gt; "text/plain" },
-  ["not found"]] unless object
-
-env["cloudflare.hijack"] = object.body
-[200, { "content-type" =&gt; "application/pdf" }, []]</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="r2.limit">A streamed R2 body is JavaScript-owned: Ruby cannot read or transform it. Do not set <code>content-length</code> or <code>transfer-encoding</code>; Workers controls framing.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-r2.md" target="_blank" rel="noreferrer">cloudflare-r2.md ↗</a>
-          </article>
-
-          <article class="guide-card guide-card-dark" id="ai">
-            <div class="guide-card-heading"><span>05 / INFERENCE</span><h2>Workers AI</h2><p data-guide-i18n="ai.body">Keep <code>run</code> model-agnostic. Use <code>generate</code> or <code>embed</code> when their explicit response helpers fit. For streaming, hand the returned descriptor to the Rack extension.</p></div>
-            <pre><code>ai = env["cloudflare.env"].AI
-stream = ai.generate(
-  "@cf/meta/llama-3.1-8b-instruct",
-  { "prompt" =&gt; "Tell a short Ruby story", "stream" =&gt; true }
-)
-
-env["cloudflare.hijack"] = stream
-[200, { "content-type" =&gt; "text/event-stream" }, []]</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="ai.limit">The original SSE bytes pass from the host to the client. Ruby cannot read, transform, or observe completion of that stream; the Rack body must still be a valid enumerable.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-ai.md" target="_blank" rel="noreferrer">cloudflare-ai.md ↗</a>
-          </article>
-
-          <article class="guide-card" id="vectorize">
-            <div class="guide-card-heading"><span>06 / RETRIEVAL</span><h2>Vectorize</h2><p data-guide-i18n="vector.body">Query by vector or ID, then insert, upsert, inspect, and delete vectors with JSON-compatible values.</p></div>
-            <pre><code>index = env["cloudflare.env"].VECTOR_INDEX
-matches = index.query(
-  [0.1, 0.2, 0.3],
-  top_k: 5,
-  return_metadata: :indexed,
-  namespace: "docs"
-)</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="vector.limit">The bridge is buffered and JSON-only. <code>top_k</code> is 1–100, or at most 50 when returning values or all metadata.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-vectorize.md" target="_blank" rel="noreferrer">cloudflare-vectorize.md ↗</a>
-          </article>
-
-          <article class="guide-card guide-card-dark" id="queues">
-            <div class="guide-card-heading"><span>07 / EVENTS</span><h2>Queues</h2><p data-guide-i18n="queue.body">A producer sends one UTF-8 text message. Consumers receive a batch environment and settle messages with <code>ack</code> or <code>retry</code>.</p></div>
-            <pre><code><span class="guide-comment"># request path: producer</span>
-env["cloudflare.env"].EVENTS_QUEUE.send("event-created")
-
-<span class="guide-comment"># queue consumer</span>
-class EventConsumer &lt; Cloudflare::QueueConsumer::Base
-  def call(_env)
-    current_batch.messages.each { |message| message.ack }
+    [200, { "content-type" =&gt; "text/plain" }, ["visits: #{count}"]]
   end
 end
 
-Cloudflare::Queues.run(EventConsumer)</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="queue.limit">Messages are limited to 128 KiB. The producer currently supports one UTF-8 String at a time; batch sends, binary and JSON bodies, and delay options are not included.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-queue.md" target="_blank" rel="noreferrer">cloudflare-queue.md ↗</a>
-          </article>
+Rackup::Handler::CloudflareWorker.run(App)</code></pre></figure>
+            <p lang="en">In Sinatra the same proxy is available as <code>env["cloudflare.env"]</code> inside routes and helpers:</p>
+            <p lang="ja">Sinatra でも、ルートやヘルパーの中から同じく <code>env["cloudflare.env"]</code> で参照できます。</p>
+            <figure class="ref-code"><figcaption>app.rb — Sinatra</figcaption><pre><code data-code="ruby">class App &lt; Sinatra::Base
+  get "/visits" do
+    kv = env["cloudflare.env"].CACHE_KV
+    count = (kv.get("visits") || "0").to_i + 1
+    kv.put("visits", count.to_s)
 
-          <article class="guide-card" id="durable-objects">
-            <div class="guide-card-heading"><span>08 / STATE</span><h2>Durable Objects</h2><p data-guide-i18n="durable.body">The current adapter is a small JSON-backed object store. Select a named instance and read or write a POJO, Hash, Array, or <code>to_pojo</code> value.</p></div>
-            <pre><code>store = Cloudflare::DurableObject.from_env(env, "OBJECTS")
+    content_type "text/plain"
+    "visits: #{count}"
+  end
+end
 
-profile = Cloudflare::DurableObject::POJO.new
-profile["name"] = "Alice"
-store.put("user-1", profile)
+Rackup::Handler::CloudflareWorker.run(App)</code></pre></figure>
+            <div class="ref-note ref-note-warn">
+              <b><span lang="en">Heads-up</span><span lang="ja">注意</span></b>
+              <p lang="en">KV is eventually consistent and has no atomic increment, so this counter can lose updates under concurrent traffic. It is fine for a demo; use D1 (<code>UPDATE … SET n = n + 1</code>) when the count must be exact.</p>
+              <p lang="ja">KV は結果整合性でアトミックなインクリメントもないため、同時アクセスがあるとこのカウンタは更新を取りこぼします。デモには十分ですが、正確な値が必要なら D1（<code>UPDATE … SET n = n + 1</code>）を使ってください。</p>
+            </div>
 
-stored = store.get("user-1")
-name = stored["name"]</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="durable.limit">Values must be JSON-compatible. Payloads are capped at 1 MiB at the Wasm boundary, and the Worker module must export <code>PicoRubyDurableObject</code>.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-durable-object.md" target="_blank" rel="noreferrer">cloudflare-durable-object.md ↗</a>
-          </article>
+            <h3><span lang="en">Three rules</span><span lang="ja">3 つの原則</span></h3>
+            <div class="ref-principles">
+              <div>
+                <h4><span lang="en">Request-scoped</span><span lang="ja">リクエストスコープ</span></h4>
+                <p lang="en">Wrappers resolve against the current request's Worker <code>env</code> and are cached only for that request. Resolve them from <code>env</code> each time instead of storing them globally.</p>
+                <p lang="ja">ラッパーは現在のリクエストの Worker <code>env</code> に対して解決され、そのリクエストの間だけキャッシュされます。グローバルに保持せず、毎回 <code>env</code> から取得してください。</p>
+              </div>
+              <div>
+                <h4><span lang="en">Typed by configuration</span><span lang="ja">型は設定で決まる</span></h4>
+                <p lang="en">The build maps every binding name in <code>wrangler.jsonc</code> to its type. The runtime never guesses a type from an object's methods, so an unsupported binding can't be mistaken for KV.</p>
+                <p lang="ja">ビルド時に <code>wrangler.jsonc</code> のバインディング名と型の対応表が作られます。ランタイムがメソッドから型を推測することはないので、未対応のバインディングを KV と取り違えることもありません。</p>
+              </div>
+              <div>
+                <h4><span lang="en">Synchronous-looking Ruby</span><span lang="ja">Ruby からは同期的</span></h4>
+                <p lang="en">Every call returns a value or raises. There are no callbacks or promises in Ruby: JSPI suspends the Wasm stack while JavaScript awaits, then resumes the same Ruby frame.</p>
+                <p lang="ja">どの呼び出しも値を返すか例外を投げるだけです。Ruby 側にコールバックや Promise はなく、JavaScript が待っている間は JSPI が Wasm のスタックを中断し、同じ Ruby のフレームから再開します。</p>
+              </div>
+            </div>
 
-          <article class="guide-card guide-card-dark" id="access">
-            <div class="guide-card-heading"><span>09 / IDENTITY</span><h2>Cloudflare Access</h2><p data-guide-i18n="access.body">Use the Rack middleware to turn the <code>CF_Authorization</code> cookie into an <code>AccessIdentity</code> at <code>env["cloudflare.identity"]</code>.</p></div>
-            <pre><code>app = Rack::Builder.new do
-  use Rack::Cloudflare::Access, team: "my-team"
+            <h3><span lang="en">Binding catalog</span><span lang="ja">バインディング一覧</span></h3>
+            <div class="ref-table-wrap">
+              <table class="ref-table">
+                <thead><tr><th><span lang="en">Binding</span><span lang="ja">バインディング</span></th><th><span lang="en">Ruby API</span><span lang="ja">Ruby API</span></th><th>wrangler.jsonc</th></tr></thead>
+                <tbody>
+                  <tr><td><a href="#environment"><span lang="en">Variables &amp; secrets</span><span lang="ja">変数と secret</span></a></td><td><code>Cloudflare::Environment</code>, <code>ENV</code></td><td><code>vars</code>, <code>wrangler secret</code></td></tr>
+                  <tr><td><a href="#d1">D1</a></td><td><code>Cloudflare::D1</code></td><td><code>d1_databases</code></td></tr>
+                  <tr><td><a href="#kv">Workers KV</a></td><td><code>Cloudflare::KV</code></td><td><code>kv_namespaces</code></td></tr>
+                  <tr><td><a href="#r2">R2</a></td><td><code>Cloudflare::R2</code></td><td><code>r2_buckets</code></td></tr>
+                  <tr><td><a href="#ai">Workers AI</a></td><td><code>Cloudflare::AI</code></td><td><code>ai</code></td></tr>
+                  <tr><td><a href="#vectorize">Vectorize</a></td><td><code>Cloudflare::Vectorize</code></td><td><code>vectorize</code></td></tr>
+                  <tr><td><a href="#queues">Queues</a></td><td><code>Cloudflare::Queue</code>, <code>Cloudflare::QueueConsumer::Base</code></td><td><code>queues</code></td></tr>
+                  <tr><td><a href="#durable-objects">Durable Objects</a></td><td><code>Cloudflare::DurableObject</code></td><td><code>durable_objects</code></td></tr>
+                  <tr><td><a href="#access">Access</a></td><td><code>Rack::Cloudflare::Access</code></td><td><code>vars.CF_ACCESS_TEAM</code></td></tr>
+                  <tr><td><a href="#fetch">Fetch</a></td><td><code>Cloudflare.fetch</code></td><td>—</td></tr>
+                  <tr><td><a href="#crypto">Web Crypto</a></td><td><code>SecureRandom</code>, <code>Crypto</code></td><td>—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <!-- ============================== SETUP ============================== -->
+          <section class="ref-section" id="setup">
+            <p class="ref-kicker">FOUNDATIONS</p>
+            <h2><span lang="en">Adding a binding</span><span lang="ja">バインディングを追加する</span></h2>
+            <p class="ref-lede" lang="en">Every resource binding is added the same way. The examples assume a project generated by <code>picoruby-cloudflare new</code>.</p>
+            <p class="ref-lede" lang="ja">どのリソースバインディングも同じ手順で追加します。以下は <code>picoruby-cloudflare new</code> で生成したプロジェクトを前提にしています。</p>
+
+            <ol class="ref-steps">
+              <li>
+                <h3><span lang="en">Create the resource</span><span lang="ja">リソースを作成する</span></h3>
+                <p lang="en">Use Wrangler for the resources that need to exist before deploy. Note the IDs it prints.</p>
+                <p lang="ja">デプロイ前に存在している必要があるリソースを Wrangler で作成します。表示される ID を控えておきます。</p>
+                <figure class="ref-code"><figcaption>Shell</figcaption><pre><code data-code="sh">npx wrangler kv namespace create CACHE_KV
+npx wrangler d1 create my-database
+npx wrangler r2 bucket create my-bucket
+npx wrangler queues create events
+npx wrangler vectorize create documents --dimensions=768 --metric=cosine</code></pre></figure>
+              </li>
+              <li>
+                <h3><span lang="en">Declare it in wrangler.jsonc</span><span lang="ja">wrangler.jsonc に宣言する</span></h3>
+                <p lang="en">The <code>binding</code> field (<code>name</code> for Durable Objects) is the identifier Ruby uses. Names must be unique across all sections.</p>
+                <p lang="ja"><code>binding</code> フィールド（Durable Objects では <code>name</code>）が Ruby から使う識別子です。名前はすべてのセクションを通して一意である必要があります。</p>
+              </li>
+              <li>
+                <h3><span lang="en">Rebuild</span><span lang="ja">ビルドし直す</span></h3>
+                <p lang="en"><code>npm run build</code> reads <code>kv_namespaces</code>, <code>d1_databases</code>, <code>r2_buckets</code>, <code>ai</code>, <code>vectorize</code>, <code>queues.producers</code>, and <code>durable_objects.bindings</code>, and regenerates the binding-type registry. <code>npm run dev</code> alone does not rebuild.</p>
+                <p lang="ja"><code>npm run build</code> が <code>kv_namespaces</code>、<code>d1_databases</code>、<code>r2_buckets</code>、<code>ai</code>、<code>vectorize</code>、<code>queues.producers</code>、<code>durable_objects.bindings</code> を読み取り、型のレジストリを生成し直します。<code>npm run dev</code> だけではビルドされません。</p>
+              </li>
+              <li>
+                <h3><span lang="en">Use it from Ruby</span><span lang="ja">Ruby から使う</span></h3>
+                <figure class="ref-code"><figcaption>app.rb</figcaption><pre><code data-code="ruby">db = env["cloudflare.env"].DB                 # quick access
+db = Cloudflare::D1.from_env(env, "DB")       # raises BindingError unless DB is a D1 database</code></pre></figure>
+              </li>
+            </ol>
+
+            <div class="ref-note">
+              <b><span lang="en">Local development</span><span lang="ja">ローカル開発</span></b>
+              <p lang="en"><code>wrangler dev</code> simulates KV, D1, R2, Queues, and Durable Objects locally. Workers AI and Vectorize have no local simulator; the <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/rag-stream" target="_blank" rel="noreferrer">RAG example</a> sets <code>"remote": true</code> on both bindings so development uses the real services.</p>
+              <p lang="ja"><code>wrangler dev</code> は KV、D1、R2、Queues、Durable Objects をローカルでシミュレートします。Workers AI と Vectorize にはローカル版がないため、<a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/rag-stream" target="_blank" rel="noreferrer">RAG のサンプル</a>では両方のバインディングに <code>"remote": true</code> を指定して実サービスを使っています。</p>
+            </div>
+            <div class="ref-note">
+              <b><span lang="en">Wrangler environments</span><span lang="ja">Wrangler の環境</span></b>
+              <p lang="en">Bindings are not inherited by <code>env.staging</code> and other Wrangler environments. Declare them in each environment block.</p>
+              <p lang="ja"><code>env.staging</code> などの Wrangler 環境にはバインディングが継承されません。環境ごとのブロックにそれぞれ宣言してください。</p>
+            </div>
+          </section>
+
+          <!-- ============================== ENVIRONMENT ============================== -->
+          <section class="ref-section" id="environment">
+            <p class="ref-kicker">FOUNDATIONS</p>
+            <h2><span lang="en">Environment proxy &amp; ENV</span><span lang="ja">環境プロキシと ENV</span></h2>
+            <p class="ref-lede" lang="en">Two doors into the same Worker <code>env</code>: <code>env["cloudflare.env"]</code> returns typed resources and JSON-typed values, while <code>ENV</code> returns variables and secrets as Strings.</p>
+            <p class="ref-lede" lang="ja">同じ Worker <code>env</code> への入口が 2 つあります。<code>env["cloudflare.env"]</code> は型付きのリソースと JSON の型を保った値を返し、<code>ENV</code> は変数と secret を String で返します。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare::Environment</code>, <code>ENV</code></dd></div>
+              <div><dt>Rack env</dt><dd><code>env["cloudflare.env"]</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>vars</code>, <code>wrangler secret put</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Resolving names</span><span lang="ja">名前を解決する</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">cloudflare = env["cloudflare.env"]
+
+db    = cloudflare.DB                  # property syntax
+db    = cloudflare["DB"]               # nil when undefined
+db    = cloudflare.fetch("DB")         # KeyError when undefined
+flags = cloudflare.fetch("FLAGS", {})  # default value (a block works too)
+cloudflare.key?("DB")                  # =&gt; true
+
+klass = cloudflare["class"]            # names that clash with Ruby methods</code></pre></figure>
+            <p lang="en">The forms differ only in how they treat a name that is not defined:</p>
+            <p lang="ja">書き方による違いは、未定義の名前の扱いだけです。</p>
+            <div class="ref-table-wrap">
+              <table class="ref-table">
+                <thead><tr><th><span lang="en">Form</span><span lang="ja">書き方</span></th><th><span lang="en">Undefined name</span><span lang="ja">未定義のとき</span></th></tr></thead>
+                <tbody>
+                  <tr><td><code>cloudflare.NAME</code></td><td><span lang="en">raises</span><span lang="ja">例外</span> <code>NoMethodError</code></td></tr>
+                  <tr><td><code>cloudflare["NAME"]</code></td><td><span lang="en">returns</span><span lang="ja">戻り値</span> <code>nil</code></td></tr>
+                  <tr><td><code>cloudflare.fetch("NAME")</code></td><td><span lang="en">raises <code>KeyError</code> unless a default or block is given</span><span lang="ja">デフォルト値かブロックがなければ <code>KeyError</code></span></td></tr>
+                  <tr><td><code>Cloudflare::KV.from_env(env, "NAME")</code></td><td><span lang="en">raises <code>Cloudflare::BindingError</code> — also when the binding has another type</span><span lang="ja"><code>Cloudflare::BindingError</code>（型が違う場合も同様）</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p lang="en"><code>from_env</code> exists on every wrapper class: <code>KV</code>, <code>D1</code>, <code>R2</code>, <code>AI</code>, <code>Vectorize</code>, <code>Queue</code>, and <code>DurableObject</code>. Each wrapper also exposes <code>binding_name</code>, a frozen copy of the name it was resolved with.</p>
+            <p lang="ja"><code>from_env</code> はすべてのラッパークラス（<code>KV</code>、<code>D1</code>、<code>R2</code>、<code>AI</code>、<code>Vectorize</code>、<code>Queue</code>、<code>DurableObject</code>）にあります。各ラッパーは解決に使った名前の凍結済みコピーを <code>binding_name</code> で返します。</p>
+
+            <h3><span lang="en">Variables and JSON values</span><span lang="ja">変数と JSON 値</span></h3>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "vars": {
+    "API_URL": "https://api.example.com",
+    "FEATURE_FLAGS": { "beta": true, "limit": 10 }
+  }
+}</code></pre></figure>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">cloudflare = env["cloudflare.env"]
+cloudflare.API_URL        # =&gt; "https://api.example.com"
+cloudflare.FEATURE_FLAGS  # =&gt; {"beta" =&gt; true, "limit" =&gt; 10}
+
+ENV["API_URL"]            # =&gt; "https://api.example.com"
+ENV["FEATURE_FLAGS"]      # =&gt; "{\"beta\":true,\"limit\":10}"
+ENV["CACHE_KV"]           # =&gt; nil — resources are not ENV values</code></pre></figure>
+            <p lang="en">Through the proxy, JSON variables keep their types: <code>Hash</code>, <code>Array</code>, <code>true</code>/<code>false</code>, numbers, and <code>nil</code>. A JSON <code>null</code> still counts as present — <code>key?</code> is <code>true</code> and <code>fetch</code> returns <code>nil</code>. Through <code>ENV</code>, the same values arrive as compact JSON Strings, so <code>false</code> becomes <code>"false"</code>. Text variables and secrets are plain Strings either way.</p>
+            <p lang="ja">プロキシ経由では JSON の変数は型を保ちます（<code>Hash</code>、<code>Array</code>、<code>true</code>/<code>false</code>、数値、<code>nil</code>）。JSON の <code>null</code> も「存在する」扱いで、<code>key?</code> は <code>true</code>、<code>fetch</code> は <code>nil</code> を返します。<code>ENV</code> 経由では同じ値がコンパクトな JSON 文字列になり、<code>false</code> は <code>"false"</code> になります。文字列の変数と secret はどちらでも String です。</p>
+
+            <h3><span lang="en">Secrets</span><span lang="ja">Secret</span></h3>
+            <figure class="ref-code"><figcaption>Shell</figcaption><pre><code data-code="sh">npx wrangler secret put API_TOKEN   # production
+echo 'API_TOKEN=dev-token' &gt;&gt; .dev.vars   # wrangler dev</code></pre></figure>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">token = ENV.fetch("API_TOKEN")   # KeyError if the secret is not set</code></pre></figure>
+            <p lang="en">Secrets are read exactly like text variables. Inspecting the proxy or <code>ENV</code> never prints values, so logging <code>env["cloudflare.env"]</code> or the whole Rack env cannot leak a secret.</p>
+            <p lang="ja">secret は文字列の変数とまったく同じように読めます。プロキシや <code>ENV</code> を <code>inspect</code> しても値は表示されないので、<code>env["cloudflare.env"]</code> や Rack env 全体をログに出しても secret は漏れません。</p>
+
+            <h3><span lang="en">Writing to ENV</span><span lang="ja">ENV への書き込み</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">ENV["API_URL"] = "http://test.invalid"  # warns on stderr (without the value)
+ENV["API_URL"]                          # =&gt; "http://test.invalid" — this request only
+ENV.delete("API_URL")                   # hides the Cloudflare value for this request</code></pre></figure>
+            <p lang="en">Assignment, <code>delete</code>, <code>clear</code>, <code>update</code>/<code>merge!</code>, and <code>replace</code> change only a request-local overlay that is discarded before the next request; Cloudflare's values are never modified. <code>ENV</code> is not a Hash and cannot be enumerated — <code>to_h</code> raises <code>NotImplementedError</code>. Lookups are synchronous and never suspend.</p>
+            <p lang="ja">代入、<code>delete</code>、<code>clear</code>、<code>update</code>/<code>merge!</code>、<code>replace</code> はリクエストローカルな上書き層を変更するだけで、次のリクエストの前に破棄されます。Cloudflare 側の値は変わりません。<code>ENV</code> は Hash ではなく列挙もできません（<code>to_h</code> は <code>NotImplementedError</code>）。読み取りは同期的で、中断は発生しません。</p>
+
+            <h3>API</h3>
+            <h4>Cloudflare::Environment</h4>
+            <dl class="ref-api">
+              <div><dt><code>NAME</code> <span class="ref-ret">→ wrapper | value</span></dt><dd lang="en">Property syntax. Raises <code>NoMethodError</code> for an undefined name.</dd><dd lang="ja">プロパティ構文。未定義なら <code>NoMethodError</code>。</dd></div>
+              <div><dt><code>[](name)</code> <span class="ref-ret">→ wrapper | value | nil</span></dt><dd lang="en">Returns <code>nil</code> for an undefined name.</dd><dd lang="ja">未定義なら <code>nil</code>。</dd></div>
+              <div><dt><code>fetch(name, default = nil) { |name| }</code> <span class="ref-ret">→ wrapper | value</span></dt><dd lang="en">Like <code>Hash#fetch</code>: default, block, or <code>KeyError</code>.</dd><dd lang="ja"><code>Hash#fetch</code> と同様。デフォルト値、ブロック、または <code>KeyError</code>。</dd></div>
+              <div><dt><code>key?(name)</code>, <code>has_key?(name)</code> <span class="ref-ret">→ true | false</span></dt><dd lang="en">Whether the name is defined. <code>respond_to?</code> uses the same check.</dd><dd lang="ja">名前が定義されているか。<code>respond_to?</code> も同じ判定を使います。</dd></div>
+            </dl>
+            <h4>ENV</h4>
+            <dl class="ref-api">
+              <div><dt><code>ENV[key]</code> <span class="ref-ret">→ String | nil</span></dt><dd lang="en">Variable or secret; JSON values as compact JSON. Resources return <code>nil</code>.</dd><dd lang="ja">変数または secret。JSON 値はコンパクトな JSON 文字列。リソースは <code>nil</code>。</dd></div>
+              <div><dt><code>ENV.fetch(key, default = nil) { |key| }</code> <span class="ref-ret">→ String</span></dt><dd lang="en"><code>KeyError</code> when missing and no default or block is given.</dd><dd lang="ja">存在せず、デフォルト値もブロックもなければ <code>KeyError</code>。</dd></div>
+              <div><dt><code>ENV.key?(key)</code> <span class="ref-ret">→ true | false</span></dt><dd lang="en">Aliases: <code>has_key?</code>, <code>include?</code>, <code>member?</code>.</dd><dd lang="ja">別名: <code>has_key?</code>、<code>include?</code>、<code>member?</code>。</dd></div>
+              <div><dt><code>ENV[key] = value</code>, <code>delete</code>, <code>clear</code>, <code>update</code>, <code>replace</code></dt><dd lang="en">Request-local overlay. Keys must be non-empty Strings (<code>TypeError</code> / <code>ArgumentError</code>); values must be Strings or <code>nil</code>.</dd><dd lang="ja">リクエストローカルな上書き。キーは空でない String（<code>TypeError</code> / <code>ArgumentError</code>）、値は String か <code>nil</code>。</dd></div>
+            </dl>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-env.md" target="_blank" rel="noreferrer">cloudflare-env.md ↗</a><a href="https://developers.cloudflare.com/workers/configuration/environment-variables/" target="_blank" rel="noreferrer">Cloudflare: environment variables ↗</a><a href="https://developers.cloudflare.com/workers/configuration/secrets/" target="_blank" rel="noreferrer">Cloudflare: secrets ↗</a></p>
+          </section>
+
+          <!-- ============================== ERRORS ============================== -->
+          <section class="ref-section" id="errors">
+            <p class="ref-kicker">FOUNDATIONS</p>
+            <h2><span lang="en">Errors</span><span lang="ja">エラー</span></h2>
+            <p class="ref-lede" lang="en">Integration failures share one hierarchy, so a single <code>rescue</code> separates platform problems from bugs in your own code.</p>
+            <p class="ref-lede" lang="ja">連携まわりの失敗は共通の階層にまとまっているので、1 つの <code>rescue</code> でプラットフォーム側の問題とアプリのバグを切り分けられます。</p>
+            <figure class="ref-code"><figcaption><span lang="en">Hierarchy</span><span lang="ja">階層</span></figcaption><pre><code data-code="ruby">Cloudflare::Error &lt; StandardError
+  Cloudflare::BindingError    # binding missing, or of another type
+  Cloudflare::HostError       # the Worker API call failed
+  Cloudflare::ProtocolError   # malformed data crossed the bridge</code></pre></figure>
+            <div class="ref-table-wrap">
+              <table class="ref-table">
+                <thead><tr><th><span lang="en">Exception</span><span lang="ja">例外</span></th><th><span lang="en">Raised when</span><span lang="ja">発生する場面</span></th></tr></thead>
+                <tbody>
+                  <tr><td><code>ArgumentError</code>, <code>TypeError</code></td><td><span lang="en">Arguments are invalid. Checked in Ruby before anything reaches the host — for example a KV <code>ttl</code> below 60 or a Hash bound as a D1 parameter.</span><span lang="ja">引数が不正なとき。ホストに渡る前に Ruby 側で検査されます（KV の <code>ttl</code> が 60 未満、D1 のパラメータに Hash を渡した、など）。</span></td></tr>
+                  <tr><td><code>NoMethodError</code></td><td><span lang="en"><code>cloudflare.NAME</code> for an undefined name.</span><span lang="ja">未定義の名前を <code>cloudflare.NAME</code> で参照したとき。</span></td></tr>
+                  <tr><td><code>KeyError</code></td><td><span lang="en"><code>fetch</code> of an undefined name without default (proxy and <code>ENV</code>).</span><span lang="ja">デフォルト値なしで未定義の名前を <code>fetch</code> したとき（プロキシと <code>ENV</code>）。</span></td></tr>
+                  <tr><td><code>Cloudflare::BindingError</code></td><td><span lang="en"><code>from_env</code> for a missing binding or one of another type.</span><span lang="ja"><code>from_env</code> で指定したバインディングが存在しない、または型が違うとき。</span></td></tr>
+                  <tr><td><code>Cloudflare::HostError</code></td><td><span lang="en">The Worker API rejected: an SQL error, a failed inference, a network error, a fetch redirect, an oversized response…</span><span lang="ja">Worker API が失敗したとき。SQL エラー、推論の失敗、ネットワークエラー、fetch のリダイレクト、サイズ超過など。</span></td></tr>
+                  <tr><td><code>Cloudflare::ProtocolError</code></td><td><span lang="en">A host result could not be decoded: invalid JSON, an unexpected result shape, invalid UTF-8.</span><span lang="ja">ホストからの結果を解釈できないとき。不正な JSON、想定外の結果の形、不正な UTF-8 など。</span></td></tr>
+                  <tr><td><code>Cloudflare::Access::Unauthorized</code></td><td><span lang="en">Access answered 401/403 to <code>get_identity</code>. Inherits from <code>StandardError</code>, not <code>Cloudflare::Error</code>.</span><span lang="ja"><code>get_identity</code> に Access が 401/403 を返したとき。<code>Cloudflare::Error</code> ではなく <code>StandardError</code> を継承しています。</span></td></tr>
+                  <tr><td><code>RuntimeError</code></td><td><span lang="en">AES-GCM decryption failed authentication.</span><span lang="ja">AES-GCM の復号で認証に失敗したとき。</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <h3><span lang="en">Handling errors</span><span lang="ja">エラーを処理する</span></h3>
+            <figure class="ref-code"><figcaption>Sinatra</figcaption><pre><code data-code="ruby">class App &lt; Sinatra::Base
+  error Cloudflare::Error do
+    status 502
+    content_type "application/json"
+    JSON.generate({ "error" =&gt; "upstream binding failed" })
+  end
+end</code></pre></figure>
+            <figure class="ref-code"><figcaption>Rack</figcaption><pre><code data-code="ruby">class App
+  def self.call(env)
+    user = env["cloudflare.env"].DB.query("SELECT name FROM users WHERE id = ?1", 1).first
+    [200, { "content-type" =&gt; "text/plain" }, [user ? user[:name] : "nobody"]]
+  rescue Cloudflare::HostError
+    [503, { "content-type" =&gt; "text/plain" }, ["database unavailable"]]
+  end
+end</code></pre></figure>
+          </section>
+
+          <!-- ============================== STREAMS ============================== -->
+          <section class="ref-section" id="streams">
+            <p class="ref-kicker">FOUNDATIONS</p>
+            <h2><span lang="en">Streams &amp; request bodies</span><span lang="ja">ストリームとリクエストボディ</span></h2>
+            <p class="ref-lede" lang="en">Large bodies don't have to pass through Ruby. The request body is read on demand, and Workers AI or R2 responses can be handed to the client as host-owned streams.</p>
+            <p class="ref-lede" lang="ja">大きなボディを Ruby に通す必要はありません。リクエストボディは必要な分だけ読み出され、Workers AI や R2 のレスポンスはホスト所有のストリームとしてそのままクライアントへ渡せます。</p>
+            <dl class="ref-facts">
+              <div><dt><span lang="en">Request body</span><span lang="ja">リクエストボディ</span></dt><dd><code>env["rack.input"]</code></dd></div>
+              <div><dt><span lang="en">Host stream</span><span lang="ja">ホストストリーム</span></dt><dd><code>Cloudflare::StreamDescriptor</code></dd></div>
+              <div><dt><span lang="en">Stream response</span><span lang="ja">ストリーム応答</span></dt><dd><code>env["cloudflare.hijack"]</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Reading the request body</span><span lang="ja">リクエストボディを読む</span></h3>
+            <p lang="en"><code>env["rack.input"]</code> (also available as <code>env["cloudflare.input"]</code>) is a <code>Cloudflare::InputStream</code>. Bytes are pulled from the Worker request in 16 KiB chunks only when you read, and are binary-safe.</p>
+            <p lang="ja"><code>env["rack.input"]</code>（<code>env["cloudflare.input"]</code> でも同じ）は <code>Cloudflare::InputStream</code> です。読んだときにだけ Worker のリクエストから 16 KiB 単位でバイトを取り出し、バイナリセーフに扱います。</p>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">payload = JSON.parse(env["rack.input"].read)   # the whole body
+
+input = env["rack.input"]
+chunk = input.read(1024)   # up to 1024 bytes, nil at EOF
+rest  = input.read         # everything left, "" at EOF
+input.rewind               # back to the first byte
+input.each { |line| }      # line by line (also: gets)</code></pre></figure>
+            <div class="ref-note">
+              <b><span lang="en">Size limit</span><span lang="ja">サイズ上限</span></b>
+              <p lang="en">The host accepts request bodies up to 1 MiB by default (its <code>maxRequestBodyBytes</code> option). A larger <code>Content-Length</code> is rejected with 413 before Ruby runs.</p>
+              <p lang="ja">ホストが受け付けるリクエストボディはデフォルトで最大 1 MiB です（ホストの <code>maxRequestBodyBytes</code> オプション）。それより大きい <code>Content-Length</code> は Ruby が動く前に 413 で拒否されます。</p>
+            </div>
+
+            <h3><span lang="en">Host streams</span><span lang="ja">ホストストリーム</span></h3>
+            <p lang="en">Workers AI (with <code>"stream" =&gt; true</code>) and <code>R2#get</code> return a <code>Cloudflare::StreamDescriptor</code>: an opaque handle to a JavaScript <code>ReadableStream</code>. Applications cannot construct one. You can hand it to the response <em>or</em> read it in Ruby — not both.</p>
+            <p lang="ja">Workers AI（<code>"stream" =&gt; true</code> 指定時）と <code>R2#get</code> は <code>Cloudflare::StreamDescriptor</code> を返します。これは JavaScript の <code>ReadableStream</code> を指す不透明なハンドルで、アプリ側では生成できません。レスポンスとして返すか、Ruby で読むかのどちらか一方だけが可能です。</p>
+
+            <h4><span lang="en">Send it as the response</span><span lang="ja">レスポンスとして返す</span></h4>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">env["cloudflare.hijack"] = descriptor
+[200, { "content-type" =&gt; "text/event-stream", "cache-control" =&gt; "no-cache" }, []]</code></pre></figure>
+            <ul class="ref-limits">
+              <li><span lang="en">Status and headers still come from the Rack tuple. The body must respond to <code>each</code>; it is closed but never iterated.</span><span lang="ja">ステータスとヘッダは Rack のタプルから取られます。ボディは <code>each</code> に応答する必要があり、<code>close</code> はされますが反復はされません。</span></li>
+              <li><span lang="en">Do not set <code>content-length</code> or <code>transfer-encoding</code>; Workers frames the stream.</span><span lang="ja"><code>content-length</code> や <code>transfer-encoding</code> は設定しないでください。フレーミングは Workers が行います。</span></li>
+              <li><span lang="en">Bytes flow from JavaScript to the client with backpressure and never enter Wasm. A client disconnect cancels the source.</span><span lang="ja">バイトはバックプレッシャー付きで JavaScript からクライアントへ流れ、Wasm には入りません。クライアントが切断するとソースもキャンセルされます。</span></li>
+              <li><span lang="en">HEAD, 204, 205, and 304 responses cancel the source without sending a body.</span><span lang="ja">HEAD、204、205、304 のレスポンスではボディを送らずにソースをキャンセルします。</span></li>
+              <li><span lang="en">Descriptors that are not selected are canceled when the request finishes. Middleware that replaces a response after the app set <code>cloudflare.hijack</code> must clear that key.</span><span lang="ja">選ばれなかったディスクリプタはリクエスト終了時にキャンセルされます。アプリが <code>cloudflare.hijack</code> を設定した後でレスポンスを差し替えるミドルウェアは、このキーをクリアする必要があります。</span></li>
+              <li><span lang="en">Errors before the hand-off can still become an HTTP error; later upstream errors abort the stream and cannot change the status. <code>rack.response_finished</code> runs at hand-off, not when the client has received everything.</span><span lang="ja">受け渡し前のエラーは HTTP エラーにできますが、それ以降の上流のエラーはストリームを中断するだけでステータスは変えられません。<code>rack.response_finished</code> は受け渡し時点で実行され、クライアントが受信し終えた時点ではありません。</span></li>
+            </ul>
+
+            <h4><span lang="en">Read it in Ruby</span><span lang="ja">Ruby で読む</span></h4>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">bucket = env["cloudflare.env"].BUCKET
+
+object = bucket.get("config/settings.json")
+settings = JSON.parse(object.body.read_all(max_bytes: 64 * 1024)) if object
+
+stream = bucket.get("images/logo.png").body
+magic  = stream.read_partial(8)   # up to 8 bytes (nil at end of stream), e.g. to sniff the type
+rest   = stream.read_all          # everything that is left</code></pre></figure>
+            <p lang="en">The whole result lives in Wasm memory, so pass <code>max_bytes:</code> for data you don't control; exceeding it raises <code>ArgumentError</code>. Once you start reading, the descriptor can no longer be assigned to <code>cloudflare.hijack</code>.</p>
+            <p lang="ja">読んだ結果はすべて Wasm のメモリに載るので、内容を管理できないデータには <code>max_bytes:</code> を指定してください。超えると <code>ArgumentError</code> になります。一度読み始めたディスクリプタは <code>cloudflare.hijack</code> に渡せません。</p>
+
+            <h3>API</h3>
+            <h4>Cloudflare::InputStream <span lang="en">(rack.input)</span></h4>
+            <dl class="ref-api">
+              <div><dt><code>read(length = nil, buffer = nil)</code> <span class="ref-ret">→ String | nil</span></dt><dd lang="en">Without <code>length</code>, the rest of the body (<code>""</code> at EOF). With <code>length</code>, up to that many bytes (<code>nil</code> at EOF).</dd><dd lang="ja"><code>length</code> なしなら残り全部（EOF では <code>""</code>）。指定するとその長さまで（EOF では <code>nil</code>）。</dd></div>
+              <div><dt><code>gets(separator = "\n")</code> <span class="ref-ret">→ String | nil</span></dt><dd lang="en">Next line including the separator.</dd><dd lang="ja">区切り文字を含む次の行。</dd></div>
+              <div><dt><code>each { |line| }</code></dt><dd lang="en">Yields every line.</dd><dd lang="ja">各行を順に渡します。</dd></div>
+              <div><dt><code>rewind</code> <span class="ref-ret">→ 0</span>, <code>close</code> <span class="ref-ret">→ nil</span></dt><dd lang="en">Rewind to the first byte; close the stream.</dd><dd lang="ja">先頭に戻る / ストリームを閉じる。</dd></div>
+            </dl>
+            <h4>Cloudflare::StreamDescriptor</h4>
+            <dl class="ref-api">
+              <div><dt><code>read_partial(length)</code> <span class="ref-ret">→ String | nil</span></dt><dd lang="en">Up to <code>length</code> bytes; <code>nil</code> at end of stream.</dd><dd lang="ja">最大 <code>length</code> バイト。末尾に達したら <code>nil</code>。</dd></div>
+              <div><dt><code>read_all(max_bytes: nil)</code> <span class="ref-ret">→ String</span></dt><dd lang="en">Reads to the end. <code>ArgumentError</code> when the total would exceed <code>max_bytes</code>.</dd><dd lang="ja">末尾まで読みます。合計が <code>max_bytes</code> を超えると <code>ArgumentError</code>。</dd></div>
+              <div><dt><code>id</code> <span class="ref-ret">→ Integer</span></dt><dd lang="en">Handle number, for diagnostics only.</dd><dd lang="ja">ハンドル番号。診断用です。</dd></div>
+            </dl>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/rack-compatibility.md" target="_blank" rel="noreferrer">rack-compatibility.md ↗</a><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/abi-v3.md" target="_blank" rel="noreferrer">abi-v3.md ↗</a></p>
+          </section>
+
+          <!-- ============================== D1 ============================== -->
+          <section class="ref-section" id="d1">
+            <p class="ref-kicker">DATA</p>
+            <h2>D1</h2>
+            <p class="ref-lede" lang="en">Serverless SQLite through prepared statements. A Ruby statement holds only its SQL and scalar parameters; each terminal call sends them to D1 as JSON and waits for the result.</p>
+            <p class="ref-lede" lang="ja">プリペアドステートメントで使うサーバーレスな SQLite です。Ruby の statement は SQL とスカラー値のパラメータだけを持ち、終端メソッドを呼んだ時点で JSON として D1 に送られ、結果を待ちます。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare::D1</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>d1_databases[].binding</code></dd></div>
+              <div><dt><span lang="en">Resolve</span><span lang="ja">取得</span></dt><dd><code>env["cloudflare.env"].DB</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Configure</span><span lang="ja">設定</span></h3>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "my-database",
+      "database_id": "&lt;database-id&gt;"
+    }
+  ]
+}</code></pre></figure>
+            <figure class="ref-code"><figcaption>Shell</figcaption><pre><code data-code="sh">npx wrangler d1 execute my-database --local --file ./schema.sql    # wrangler dev
+npx wrangler d1 execute my-database --remote --file ./schema.sql   # production</code></pre></figure>
+
+            <h3><span lang="en">Prepare, bind, run</span><span lang="ja">prepare・bind・実行</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">db = env["cloudflare.env"].DB
+
+find_user = db.prepare("SELECT id, name FROM users WHERE id = ?1")
+alice = find_user.bind(1).first   # Row or nil
+bob   = find_user.bind(2).first   # the prepared statement is reusable
+
+active = db.query("SELECT id, name FROM users WHERE active = ?1 ORDER BY id", true).rows</code></pre></figure>
+            <p lang="en"><code>bind</code> returns a new statement and leaves the original unchanged, so one prepared statement can serve many parameter sets. <code>query(sql, *params)</code> is shorthand for <code>prepare(sql).bind(*params)</code>. Use <code>?1</code>, <code>?2</code>, … placeholders — never interpolate values into SQL.</p>
+            <p lang="ja"><code>bind</code> は元の statement を変えずに新しい statement を返すので、1 つのプリペアドステートメントを複数のパラメータで使い回せます。<code>query(sql, *params)</code> は <code>prepare(sql).bind(*params)</code> の短縮形です。値は SQL に埋め込まず、<code>?1</code>、<code>?2</code> などのプレースホルダを使ってください。</p>
+
+            <h3><span lang="en">Choosing a result shape</span><span lang="ja">結果の受け取り方を選ぶ</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">stmt = db.query("SELECT id, name FROM users ORDER BY id")
+
+stmt.rows                     # =&gt; [{"id" =&gt; 1, "name" =&gt; "Alice"}, ...]
+stmt.first                    # =&gt; {"id" =&gt; 1, "name" =&gt; "Alice"} or nil
+stmt.first(:name)             # =&gt; "Alice" — one column of the first row
+stmt.raw                      # =&gt; [[1, "Alice"], [2, "Bob"]]
+stmt.raw(column_names: true)  # =&gt; [["id", "name"], [1, "Alice"], [2, "Bob"]]
+stmt.run                      # =&gt; Cloudflare::D1::Result (rows + metadata)</code></pre></figure>
+            <p lang="en">Rows are <code>Cloudflare::D1::Row</code>, a Hash with String keys whose <code>[]</code> also accepts Symbols: <code>row["name"]</code> and <code>row[:name]</code> are equivalent. Only <code>[]</code> converts Symbols; <code>fetch</code>, <code>dig</code>, and other Hash methods need String keys.</p>
+            <p lang="ja">行は <code>Cloudflare::D1::Row</code> で、String キーの Hash ですが <code>[]</code> だけは Symbol も受け付けます（<code>row["name"]</code> と <code>row[:name]</code> は同じ）。Symbol を変換するのは <code>[]</code> だけなので、<code>fetch</code> や <code>dig</code> などの Hash メソッドには String キーを使ってください。</p>
+
+            <h3><span lang="en">Writes and metadata</span><span lang="ja">書き込みとメタデータ</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">result = db
+  .prepare("INSERT INTO todos (title, completed) VALUES (?1, ?2)")
+  .bind("Ship PicoRuby", false)
+  .run
+
+result.success?     # =&gt; true
+result.last_row_id  # =&gt; 42
+result.changes      # =&gt; 1
+
+todo = db.query("SELECT * FROM todos WHERE id = ?1", result.last_row_id).first
+todo[:completed]    # =&gt; 0 — SQLite stores booleans as 1 and 0</code></pre></figure>
+            <figure class="ref-code"><figcaption><span lang="en">Ruby — 404 when nothing changed</span><span lang="ja">Ruby — 変更がなければ 404</span></figcaption><pre><code data-code="ruby">result = db.query("DELETE FROM todos WHERE id = ?1", id).run
+return [404, { "content-type" =&gt; "text/plain" }, ["not found"]] if result.changes == 0</code></pre></figure>
+
+            <h3><span lang="en">Batches are transactions</span><span lang="ja">バッチはトランザクション</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">results = db.batch([
+  db.query("UPDATE accounts SET balance = balance - ?1 WHERE name = ?2", 30, "alice"),
+  db.query("UPDATE accounts SET balance = balance + ?1 WHERE name = ?2", 30, "bob"),
+  db.query("INSERT INTO transfers (from_name, to_name, amount) VALUES (?1, ?2, ?3)", "alice", "bob", 30),
+])
+results.map { |result| result.changes }   # one Result per statement, in order</code></pre></figure>
+            <p lang="en">D1 runs the statements sequentially and rolls all of them back if one fails (raising <code>Cloudflare::HostError</code>). Every statement must come from the same binding. There is no Ruby transaction block — <code>batch</code> is the transaction API.</p>
+            <p lang="ja">D1 は statement を順に実行し、1 つでも失敗するとすべてロールバックします（<code>Cloudflare::HostError</code> が発生）。statement はすべて同じバインディングから作る必要があります。Ruby のトランザクションブロックはなく、<code>batch</code> がトランザクションの API です。</p>
+
+            <h3>API</h3>
+            <h4>Cloudflare::D1</h4>
+            <dl class="ref-api">
+              <div><dt><code>prepare(sql)</code> <span class="ref-ret">→ Statement</span></dt><dd lang="en">A reusable statement without parameters.</dd><dd lang="ja">パラメータなしの、使い回せる statement。</dd></div>
+              <div><dt><code>query(sql, *params)</code> <span class="ref-ret">→ Statement</span></dt><dd lang="en">Same as <code>prepare(sql).bind(*params)</code>.</dd><dd lang="ja"><code>prepare(sql).bind(*params)</code> と同じ。</dd></div>
+              <div><dt><code>batch(statements)</code> <span class="ref-ret">→ Array&lt;Result&gt;</span></dt><dd lang="en">Runs a non-empty Array of statements atomically.</dd><dd lang="ja">空でない statement の配列をアトミックに実行します。</dd></div>
+            </dl>
+            <h4>Cloudflare::D1::Statement</h4>
+            <dl class="ref-api">
+              <div><dt><code>bind(*params)</code> <span class="ref-ret">→ Statement</span></dt><dd lang="en">A new statement with these parameters.</dd><dd lang="ja">このパラメータを持つ新しい statement。</dd></div>
+              <div><dt><code>run</code> <span class="ref-ret">→ Result</span></dt><dd lang="en">Rows plus D1 metadata. Use for writes.</dd><dd lang="ja">行と D1 のメタデータ。書き込みに使います。</dd></div>
+              <div><dt><code>rows</code> <span class="ref-ret">→ Array&lt;Row&gt;</span></dt><dd lang="en">Same as <code>run.rows</code>.</dd><dd lang="ja"><code>run.rows</code> と同じ。</dd></div>
+              <div><dt><code>first(column = nil)</code> <span class="ref-ret">→ Row | value | nil</span></dt><dd lang="en">First row, or one of its columns when <code>column</code> (String or Symbol) is given.</dd><dd lang="ja">最初の行。<code>column</code>（String か Symbol）を指定するとその列の値。</dd></div>
+              <div><dt><code>raw(column_names: false)</code> <span class="ref-ret">→ Array&lt;Array&gt;</span></dt><dd lang="en">Rows as Arrays; with <code>column_names: true</code> the first element lists the column names.</dd><dd lang="ja">行を配列で返します。<code>column_names: true</code> なら先頭に列名の配列が入ります。</dd></div>
+              <div><dt><code>sql</code>, <code>params</code></dt><dd lang="en">The frozen SQL and parameters.</dd><dd lang="ja">凍結済みの SQL とパラメータ。</dd></div>
+            </dl>
+            <h4>Cloudflare::D1::Result</h4>
+            <dl class="ref-api">
+              <div><dt><code>success?</code>, <code>rows</code>, <code>meta</code></dt><dd lang="en">Success flag, Array of Row, and the raw metadata Hash.</dd><dd lang="ja">成功フラグ、Row の配列、生のメタデータ Hash。</dd></div>
+              <div><dt><code>changes</code>, <code>last_row_id</code>, <code>changed_db?</code></dt><dd lang="en">Rows changed, the last inserted rowid, and whether the database was modified.</dd><dd lang="ja">変更行数、最後に挿入された rowid、データベースが変更されたか。</dd></div>
+              <div><dt><code>duration</code>, <code>rows_read</code>, <code>rows_written</code></dt><dd lang="en">Execution time in milliseconds and row counters from D1.</dd><dd lang="ja">実行時間（ミリ秒）と D1 の行カウンタ。</dd></div>
+            </dl>
+
+            <h3><span lang="en">Limits</span><span lang="ja">制約</span></h3>
+            <ul class="ref-limits">
+              <li><span lang="en">Parameters: <code>nil</code>, String, Integer within ±2<sup>53</sup>−1, finite Float, <code>true</code>, <code>false</code>. Hash, Array, Symbol, BLOB, and BigInt raise <code>ArgumentError</code>.</span><span lang="ja">パラメータ: <code>nil</code>、String、±2<sup>53</sup>−1 以内の Integer、有限の Float、<code>true</code>、<code>false</code>。Hash、Array、Symbol、BLOB、BigInt は <code>ArgumentError</code>。</span></li>
+              <li><span lang="en">SQL must be a non-empty String without NUL bytes. Requests and responses are limited to 8 MiB of JSON.</span><span lang="ja">SQL は NUL バイトを含まない空でない String。リクエストとレスポンスは JSON で最大 8 MiB。</span></li>
+              <li><span lang="en">Not available: <code>exec</code>, query builders or models, D1 Sessions (read replication), BLOB parameters.</span><span lang="ja">未対応: <code>exec</code>、クエリビルダやモデル、D1 Sessions（リードレプリケーション）、BLOB パラメータ。</span></li>
+            </ul>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-d1.md" target="_blank" rel="noreferrer">cloudflare-d1.md ↗</a><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/d1-todo" target="_blank" rel="noreferrer">examples/d1-todo ↗</a><a href="https://developers.cloudflare.com/d1/worker-api/" target="_blank" rel="noreferrer">Cloudflare: D1 Worker API ↗</a></p>
+          </section>
+
+          <!-- ============================== KV ============================== -->
+          <section class="ref-section" id="kv">
+            <p class="ref-kicker">DATA</p>
+            <h2>Workers KV</h2>
+            <p class="ref-lede" lang="en">A global key-value store for data that is read often and written rarely. Values are binary-safe Strings and can expire after a TTL.</p>
+            <p class="ref-lede" lang="ja">読み込みが多く書き込みが少ないデータ向けの、グローバルな Key-Value ストアです。値はバイナリセーフな String で、TTL を付けて期限切れにできます。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare::KV</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>kv_namespaces[].binding</code></dd></div>
+              <div><dt><span lang="en">Resolve</span><span lang="ja">取得</span></dt><dd><code>env["cloudflare.env"].CACHE_KV</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Configure</span><span lang="ja">設定</span></h3>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "kv_namespaces": [
+    { "binding": "CACHE_KV", "id": "&lt;namespace-id&gt;" }
+  ]
+}</code></pre></figure>
+            <p lang="en"><code>wrangler dev</code> uses a local namespace. Wrangler can also provision the remote namespace on the first deploy and record its <code>id</code> in the configuration.</p>
+            <p lang="ja"><code>wrangler dev</code> ではローカルの namespace が使われます。Wrangler は初回デプロイ時にリモートの namespace を作成し、<code>id</code> を設定に書き込むこともできます。</p>
+
+            <h3><span lang="en">Read and write</span><span lang="ja">読み書き</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">kv = env["cloudflare.env"].CACHE_KV
+
+kv.put("greeting", "Hello from PicoRuby")   # =&gt; nil once the write is accepted
+kv.put("session:abc", token, ttl: 3600)     # expires in one hour
+kv.get("greeting")                          # =&gt; "Hello from PicoRuby"
+kv.get("missing")                           # =&gt; nil</code></pre></figure>
+
+            <h3><span lang="en">Pattern: cache an upstream API</span><span lang="ja">パターン: 外部 API のキャッシュ</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">def self.weather(env)
+  kv  = env["cloudflare.env"].CACHE_KV
+  key = "weather:tokyo"
+
+  cached = kv.get(key)
+  return cached if cached
+
+  response = Cloudflare.fetch("https://api.example.com/weather/tokyo")
+  kv.put(key, response.body, ttl: 600) if response.status == 200
+  response.body
+end</code></pre></figure>
+
+            <h3><span lang="en">Pattern: JSON values</span><span lang="ja">パターン: JSON を保存する</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">kv.put("user:1", JSON.generate({ "name" =&gt; "Alice", "plan" =&gt; "pro" }))
+
+raw  = kv.get("user:1")
+user = raw &amp;&amp; JSON.parse(raw)</code></pre></figure>
+            <div class="ref-note ref-note-warn">
+              <b><span lang="en">Consistency</span><span lang="ja">一貫性</span></b>
+              <p lang="en">KV is eventually consistent: a write is visible at once where it was made, but can take a minute or more to reach other locations. Don't build counters or locks on it.</p>
+              <p lang="ja">KV は結果整合性です。書き込みはその場所ではすぐ見えますが、他のロケーションに届くまで 1 分以上かかることがあります。カウンタやロックには使わないでください。</p>
+            </div>
+
+            <h3>API</h3>
+            <dl class="ref-api">
+              <div><dt><code>get(key)</code> <span class="ref-ret">→ String | nil</span></dt><dd lang="en">The exact stored bytes, or <code>nil</code>.</dd><dd lang="ja">保存されたバイト列そのまま、または <code>nil</code>。</dd></div>
+              <div><dt><code>put(key, value, ttl: nil)</code> <span class="ref-ret">→ nil</span></dt><dd lang="en">Writes <code>value</code>. <code>ttl</code> is a relative expiration in seconds; omit it to keep the value forever.</dd><dd lang="ja"><code>value</code> を書き込みます。<code>ttl</code> は秒単位の相対的な有効期限で、省略すると無期限です。</dd></div>
+            </dl>
+
+            <h3><span lang="en">Limits</span><span lang="ja">制約</span></h3>
+            <ul class="ref-limits">
+              <li><span lang="en">Only <code>get</code> and <code>put</code>. Delete, list, metadata, absolute expiration, and bulk operations are not available yet, and there is no <code>set</code> alias.</span><span lang="ja">使えるのは <code>get</code> と <code>put</code> だけです。削除、一覧、メタデータ、絶対時刻での期限、一括操作はまだなく、<code>set</code> という別名もありません。</span></li>
+              <li><span lang="en"><code>ttl</code> must be an Integer of at least 60; anything else raises <code>ArgumentError</code> before the call is made.</span><span lang="ja"><code>ttl</code> は 60 以上の Integer でなければならず、それ以外は呼び出し前に <code>ArgumentError</code> になります。</span></li>
+              <li><span lang="en">Keys: non-empty valid UTF-8, not <code>.</code> or <code>..</code>, at most 512 bytes. Values: at most 8 MiB (lower than the KV platform maximum).</span><span lang="ja">キー: 空でない正しい UTF-8 で、<code>.</code> や <code>..</code> は不可、最大 512 バイト。値: 最大 8 MiB（KV プラットフォームの上限より小さい値です）。</span></li>
+            </ul>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-kv.md" target="_blank" rel="noreferrer">cloudflare-kv.md ↗</a><a href="https://developers.cloudflare.com/kv/" target="_blank" rel="noreferrer">Cloudflare: Workers KV ↗</a></p>
+          </section>
+
+          <!-- ============================== R2 ============================== -->
+          <section class="ref-section" id="r2">
+            <p class="ref-kicker">DATA</p>
+            <h2>R2</h2>
+            <p class="ref-lede" lang="en">S3-compatible object storage. Upload Strings or the request stream, inspect metadata, list and delete keys, and serve object bodies without buffering them in Ruby.</p>
+            <p class="ref-lede" lang="ja">S3 互換のオブジェクトストレージです。String やリクエストのストリームをアップロードし、メタデータの確認、キーの一覧・削除を行い、オブジェクトのボディを Ruby でバッファせずに配信できます。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare::R2</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>r2_buckets[].binding</code></dd></div>
+              <div><dt><span lang="en">Resolve</span><span lang="ja">取得</span></dt><dd><code>env["cloudflare.env"].BUCKET</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Configure</span><span lang="ja">設定</span></h3>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "r2_buckets": [
+    { "binding": "BUCKET", "bucket_name": "my-bucket" }
+  ]
+}</code></pre></figure>
+
+            <h3><span lang="en">Upload</span><span lang="ja">アップロード</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">bucket = env["cloudflare.env"].BUCKET
+
+object = bucket.put(
+  "greetings/hello.txt",
+  "Hello from PicoRuby\n",
+  httpMetadata: { contentType: "text/plain; charset=utf-8" },
+  customMetadata: { source: "worker" }
+)
+object.key    # =&gt; "greetings/hello.txt"
+object.size   # =&gt; 20
+object.etag   # =&gt; "a1b2c3..." (unquoted; http_etag is the quoted form)</code></pre></figure>
+            <p lang="en">Strings are sent as raw bytes, so binary data is preserved. Options use R2's JavaScript names (<code>httpMetadata</code>, <code>customMetadata</code>, <code>onlyIf</code>, <code>range</code>, <code>storageClass</code>, …) and must be JSON-compatible; values that need a JavaScript <code>Headers</code>, <code>Date</code>, or <code>ArrayBuffer</code> are not supported.</p>
+            <p lang="ja">String は生のバイト列として送られるので、バイナリも壊れません。オプションには R2 の JavaScript での名前（<code>httpMetadata</code>、<code>customMetadata</code>、<code>onlyIf</code>、<code>range</code>、<code>storageClass</code> など）を使い、JSON 互換である必要があります。JavaScript の <code>Headers</code>、<code>Date</code>、<code>ArrayBuffer</code> が必要な値には対応していません。</p>
+
+            <h4><span lang="en">Stream the request body into R2</span><span lang="ja">リクエストボディをそのまま R2 へ</span></h4>
+            <figure class="ref-code"><figcaption>Rack</figcaption><pre><code data-code="ruby">class App
+  def self.call(env)
+    return [405, { "content-type" =&gt; "text/plain" }, ["use PUT"]] unless env["REQUEST_METHOD"] == "PUT"
+
+    object = env["cloudflare.env"].BUCKET.put(
+      "uploads/latest.bin",
+      env["rack.input"],
+      httpMetadata: { contentType: env["CONTENT_TYPE"] || "application/octet-stream" }
+    )
+    [201, { "content-type" =&gt; "text/plain" }, [object.etag]]
+  end
+end</code></pre></figure>
+            <p lang="en">Passing an unread <code>rack.input</code> as the value hands the request stream to R2 without copying it through Wasm. It raises <code>ArgumentError</code> if the input was already read, and the input cannot be read afterwards. The request-body limit (1 MiB by default) still applies, and R2 needs to know the length, so clients should send <code>Content-Length</code>.</p>
+            <p lang="ja">未読の <code>rack.input</code> を値に渡すと、リクエストのストリームを Wasm にコピーせずに R2 へ渡します。すでに読んだ入力を渡すと <code>ArgumentError</code> になり、渡した後の入力は読めません。リクエストボディの上限（デフォルト 1 MiB）はこの場合も適用されます。また R2 は長さを知る必要があるため、クライアントは <code>Content-Length</code> を送ってください。</p>
+
+            <h3><span lang="en">Serve an object</span><span lang="ja">オブジェクトを配信する</span></h3>
+            <figure class="ref-code"><figcaption>Sinatra</figcaption><pre><code data-code="ruby">class App &lt; Sinatra::Base
+  get "/files/:name" do
+    object = env["cloudflare.env"].BUCKET.get("files/#{params[:name]}")
+    halt 404, "not found" unless object
+
+    content_type object.http_metadata["contentType"] || "application/octet-stream"
+    headers "etag" =&gt; object.http_etag
+    env["cloudflare.hijack"] = object.body
+    body []
+  end
+end</code></pre></figure>
+            <p lang="en"><code>object.body</code> is a <a href="#streams">StreamDescriptor</a>, so the bytes flow from R2 to the client without entering Ruby. Read small objects in Ruby with <code>object.body.read_all(max_bytes: …)</code> instead.</p>
+            <p lang="ja"><code>object.body</code> は <a href="#streams">StreamDescriptor</a> なので、バイトは Ruby を経由せずに R2 からクライアントへ流れます。小さなオブジェクトを Ruby で読みたいときは <code>object.body.read_all(max_bytes: …)</code> を使います。</p>
+
+            <h4><span lang="en">Ranges and preconditions</span><span lang="ja">範囲指定と条件付き取得</span></h4>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">part = bucket.get("videos/intro.mp4", range: { offset: 0, length: 1_048_576 })
+part.range   # the range R2 returned
+
+object = bucket.get("report.pdf", onlyIf: { etagDoesNotMatch: known_etag })
+object.body  # =&gt; nil when the precondition failed (metadata only)</code></pre></figure>
+            <p lang="en"><code>get</code> returns <code>nil</code> when the key does not exist. When an <code>onlyIf</code> precondition fails it returns the object's metadata with <code>body == nil</code>.</p>
+            <p lang="ja">キーが存在しなければ <code>get</code> は <code>nil</code> を返します。<code>onlyIf</code> の条件を満たさない場合は、<code>body == nil</code> のメタデータだけのオブジェクトを返します。</p>
+
+            <h3><span lang="en">Metadata, listing, deleting</span><span lang="ja">メタデータ・一覧・削除</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">meta = bucket.head("greetings/hello.txt")   # R2::Object without body, or nil
+meta.custom_metadata                        # =&gt; {"source" =&gt; "worker"}
+
+listing = bucket.list(prefix: "greetings/", limit: 100)
+keys = listing.objects.map { |object| object.key }
+listing = bucket.list(prefix: "greetings/", cursor: listing.cursor) if listing.truncated?
+
+folders = bucket.list(prefix: "files/", delimiter: "/").delimited_prefixes
+
+bucket.delete("greetings/hello.txt")
+bucket.delete(["a.txt", "b.txt"])           # several keys in one call</code></pre></figure>
+
+            <h3>API</h3>
+            <h4>Cloudflare::R2</h4>
+            <dl class="ref-api">
+              <div><dt><code>put(key, value, options = {})</code> <span class="ref-ret">→ R2::Object</span></dt><dd lang="en"><code>value</code> is a String or an unread <code>rack.input</code>.</dd><dd lang="ja"><code>value</code> は String か未読の <code>rack.input</code>。</dd></div>
+              <div><dt><code>get(key, options = {})</code> <span class="ref-ret">→ R2::Object | nil</span></dt><dd lang="en"><code>body</code> is a StreamDescriptor, or <code>nil</code> when a precondition failed.</dd><dd lang="ja"><code>body</code> は StreamDescriptor。条件を満たさなかった場合は <code>nil</code>。</dd></div>
+              <div><dt><code>head(key)</code> <span class="ref-ret">→ R2::Object | nil</span></dt><dd lang="en">Metadata only.</dd><dd lang="ja">メタデータのみ。</dd></div>
+              <div><dt><code>list(options = {})</code> <span class="ref-ret">→ R2::Listing</span></dt><dd lang="en">Options such as <code>prefix</code>, <code>limit</code>, <code>cursor</code>, <code>delimiter</code>, <code>include</code>.</dd><dd lang="ja"><code>prefix</code>、<code>limit</code>、<code>cursor</code>、<code>delimiter</code>、<code>include</code> などのオプション。</dd></div>
+              <div><dt><code>delete(key_or_keys)</code> <span class="ref-ret">→ nil</span></dt><dd lang="en">A String or a non-empty Array of Strings.</dd><dd lang="ja">String、または空でない String の配列。</dd></div>
+            </dl>
+            <h4>Cloudflare::R2::Object</h4>
+            <dl class="ref-api">
+              <div><dt><code>key</code>, <code>size</code>, <code>version</code>, <code>etag</code>, <code>http_etag</code></dt><dd lang="en">Identity and size. <code>http_etag</code> is quoted, ready for an <code>etag</code> header.</dd><dd lang="ja">識別情報とサイズ。<code>http_etag</code> は引用符付きで、そのまま <code>etag</code> ヘッダに使えます。</dd></div>
+              <div><dt><code>http_metadata</code>, <code>custom_metadata</code> <span class="ref-ret">→ Hash</span></dt><dd lang="en">Metadata with R2's camelCase keys, e.g. <code>"contentType"</code>.</dd><dd lang="ja">R2 の camelCase キーのメタデータ（例: <code>"contentType"</code>）。</dd></div>
+              <div><dt><code>uploaded</code>, <code>range</code>, <code>storage_class</code>, <code>raw</code></dt><dd lang="en">Upload time as an ISO 8601 String, the returned range, the storage class, and the full metadata Hash.</dd><dd lang="ja">ISO 8601 文字列のアップロード日時、返された範囲、ストレージクラス、メタデータ全体の Hash。</dd></div>
+              <div><dt><code>body</code> <span class="ref-ret">→ StreamDescriptor | nil</span></dt><dd lang="en">Only set on objects returned by <code>get</code>.</dd><dd lang="ja"><code>get</code> が返したオブジェクトにだけ設定されます。</dd></div>
+            </dl>
+            <h4>Cloudflare::R2::Listing</h4>
+            <dl class="ref-api">
+              <div><dt><code>objects</code>, <code>truncated?</code>, <code>cursor</code>, <code>delimited_prefixes</code></dt><dd lang="en">Objects on this page, whether more pages exist, the cursor for the next page, and common prefixes when <code>delimiter</code> is used.</dd><dd lang="ja">このページのオブジェクト、続きがあるか、次ページ用のカーソル、<code>delimiter</code> 指定時の共通プレフィックス。</dd></div>
+            </dl>
+
+            <h3><span lang="en">Limits</span><span lang="ja">制約</span></h3>
+            <ul class="ref-limits">
+              <li><span lang="en">Keys must be Strings and options JSON-compatible Hashes; otherwise <code>ArgumentError</code>.</span><span lang="ja">キーは String、オプションは JSON 互換の Hash でなければ <code>ArgumentError</code>。</span></li>
+              <li><span lang="en">Multipart uploads and <code>Headers</code>/<code>Date</code>/<code>ArrayBuffer</code> option values are not available.</span><span lang="ja">マルチパートアップロードと、<code>Headers</code> / <code>Date</code> / <code>ArrayBuffer</code> のオプション値には未対応。</span></li>
+              <li><span lang="en">A body can be streamed to the client or read in Ruby, not both. When streaming, do not set <code>content-length</code>.</span><span lang="ja">ボディはクライアントへ流すか Ruby で読むかのどちらか一方だけです。流す場合は <code>content-length</code> を設定しないでください。</span></li>
+            </ul>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-r2.md" target="_blank" rel="noreferrer">cloudflare-r2.md ↗</a><a href="https://developers.cloudflare.com/r2/api/workers/workers-api-reference/" target="_blank" rel="noreferrer">Cloudflare: R2 Workers API ↗</a></p>
+          </section>
+
+          <!-- ============================== AI ============================== -->
+          <section class="ref-section" id="ai">
+            <p class="ref-kicker">AI</p>
+            <h2>Workers AI</h2>
+            <p class="ref-lede" lang="en">Run models on Cloudflare's GPUs with a JSON-in, JSON-out call. Typed helpers cover text generation and embeddings, and streaming output can go straight to the browser.</p>
+            <p class="ref-lede" lang="ja">Cloudflare の GPU 上でモデルを実行します。入力も出力も JSON です。テキスト生成と埋め込みには型付きのヘルパーがあり、ストリーミング出力はそのままブラウザへ流せます。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare::AI</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>ai.binding</code></dd></div>
+              <div><dt><span lang="en">Resolve</span><span lang="ja">取得</span></dt><dd><code>env["cloudflare.env"].AI</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Configure</span><span lang="ja">設定</span></h3>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "ai": { "binding": "AI" }
+}</code></pre></figure>
+            <p lang="en">A Worker has at most one AI binding. Inference always runs on Cloudflare — also under <code>wrangler dev</code> — and counts toward your usage.</p>
+            <p lang="ja">AI バインディングは 1 つの Worker に 1 つだけです。推論は <code>wrangler dev</code> でも常に Cloudflare 上で実行され、利用量に計上されます。</p>
+
+            <h3><span lang="en">Generate text</span><span lang="ja">テキストを生成する</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">ai = env["cloudflare.env"].AI
+
+result = ai.generate("@cf/meta/llama-3.1-8b-instruct", {
+  "messages" =&gt; [
+    { "role" =&gt; "system", "content" =&gt; "You are a concise assistant." },
+    { "role" =&gt; "user",   "content" =&gt; "What is PicoRuby?" },
+  ],
+})
+
+result.response   # =&gt; "PicoRuby is ..."
+result.usage      # =&gt; {"prompt_tokens" =&gt; 24, "completion_tokens" =&gt; 60, ...} or nil</code></pre></figure>
+            <p lang="en">A single <code>"prompt" =&gt; "…"</code> works too. Input keys follow each model's schema in the Workers AI catalog.</p>
+            <p lang="ja"><code>"prompt" =&gt; "…"</code> だけでも使えます。入力のキーは Workers AI カタログにある各モデルのスキーマに従います。</p>
+
+            <h3><span lang="en">Embeddings</span><span lang="ja">埋め込み</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">embedded = ai.embed("@cf/baai/bge-base-en-v1.5", { "text" =&gt; ["Ruby", "WebAssembly"] })
+
+embedded.count        # =&gt; 2
+embedded.dimensions   # =&gt; 768
+embedded.first        # =&gt; [0.0123, -0.0456, ...]
+embedded.vectors      # =&gt; every vector, in input order</code></pre></figure>
+
+            <h3><span lang="en">Any model: run</span><span lang="ja">任意のモデル: run</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">result = ai.run("@cf/meta/llama-3.1-8b-instruct", { "prompt" =&gt; "Hello" })
+result["response"]
+
+# Per-call options, e.g. route the request through AI Gateway
+result = ai.run(
+  "@cf/meta/llama-3.1-8b-instruct",
+  { "prompt" =&gt; "Hello" },
+  { "gateway" =&gt; { "id" =&gt; "my-gateway" } }
+)</code></pre></figure>
+            <p lang="en"><code>run</code> returns the model's JSON response as plain Hashes and Arrays, so it works for any model whose output is JSON. <code>generate</code> and <code>embed</code> call <code>run</code> and then check the response shape — they never guess the task from the model name. Only <code>run</code> accepts the options argument.</p>
+            <p lang="ja"><code>run</code> はモデルの JSON レスポンスを普通の Hash と Array で返すので、出力が JSON のモデルなら何でも使えます。<code>generate</code> と <code>embed</code> は <code>run</code> を呼んだ後にレスポンスの形を検証するだけで、モデル名からタスクを推測することはありません。オプション引数を受け取るのは <code>run</code> だけです。</p>
+
+            <h3><span lang="en">Stream to the browser</span><span lang="ja">ブラウザへストリーミング</span></h3>
+            <figure class="ref-code"><figcaption>Sinatra</figcaption><pre><code data-code="ruby">class App &lt; Sinatra::Base
+  post "/chat" do
+    question = JSON.parse(env["rack.input"].read)["question"]
+    stream = env["cloudflare.env"].AI.generate("@cf/meta/llama-3.1-8b-instruct", {
+      "messages" =&gt; [{ "role" =&gt; "user", "content" =&gt; question }],
+      "stream" =&gt; true,
+    })
+
+    content_type "text/event-stream"
+    headers "cache-control" =&gt; "no-cache"
+    env["cloudflare.hijack"] = stream
+    body []
+  end
+end</code></pre></figure>
+            <p lang="en">With <code>"stream" =&gt; true</code>, <code>run</code> and <code>generate</code> return a <a href="#streams">StreamDescriptor</a> instead of a result. The original server-sent events — <code>data: {"response":"…"}</code> lines ending with <code>data: [DONE]</code> — flow from Workers AI to the client, and a client disconnect cancels the inference. The <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/ai-stream" target="_blank" rel="noreferrer">ai-stream example</a> shows the browser side.</p>
+            <p lang="ja"><code>"stream" =&gt; true</code> を指定すると、<code>run</code> と <code>generate</code> は結果の代わりに <a href="#streams">StreamDescriptor</a> を返します。元の Server-Sent Events（<code>data: {"response":"…"}</code> の行が続き、<code>data: [DONE]</code> で終わる）が Workers AI からクライアントへ流れ、クライアントが切断すると推論もキャンセルされます。ブラウザ側の実装は <a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/ai-stream" target="_blank" rel="noreferrer">ai-stream のサンプル</a>を参照してください。</p>
+
+            <h3>API</h3>
+            <h4>Cloudflare::AI</h4>
+            <dl class="ref-api">
+              <div><dt><code>run(model, input = {}, options = {})</code> <span class="ref-ret">→ Hash | Array | StreamDescriptor</span></dt><dd lang="en">The parsed JSON response, or a descriptor when <code>input["stream"]</code> is true.</dd><dd lang="ja">パース済みの JSON レスポンス。<code>input["stream"]</code> が true ならディスクリプタ。</dd></div>
+              <div><dt><code>generate(model, input = {})</code> <span class="ref-ret">→ TextGenerationResult | StreamDescriptor</span></dt><dd lang="en">Requires a <code>"response"</code> key in the result.</dd><dd lang="ja">結果に <code>"response"</code> キーが必要です。</dd></div>
+              <div><dt><code>embed(model, input = {})</code> <span class="ref-ret">→ EmbeddingResult</span></dt><dd lang="en">Requires <code>"data"</code> and a two-item <code>"shape"</code>. Always buffered.</dd><dd lang="ja"><code>"data"</code> と 2 要素の <code>"shape"</code> が必要です。常にバッファされます。</dd></div>
+            </dl>
+            <h4>TextGenerationResult · EmbeddingResult</h4>
+            <dl class="ref-api">
+              <div><dt><code>response</code>, <code>usage</code>, <code>raw</code></dt><dd lang="en">Generated text, the token usage Hash (or <code>nil</code>), and the full response.</dd><dd lang="ja">生成されたテキスト、トークン使用量の Hash（または <code>nil</code>）、レスポンス全体。</dd></div>
+              <div><dt><code>vectors</code>, <code>first</code>, <code>count</code>, <code>dimensions</code>, <code>shape</code>, <code>pooling</code>, <code>raw</code></dt><dd lang="en">All vectors, the first vector, <code>shape[0]</code>, <code>shape[1]</code>, the shape, the pooling method (or <code>nil</code>), and the full response.</dd><dd lang="ja">全ベクトル、最初のベクトル、<code>shape[0]</code>、<code>shape[1]</code>、shape、プーリング方式（または <code>nil</code>）、レスポンス全体。</dd></div>
+            </dl>
+
+            <h3><span lang="en">Limits</span><span lang="ja">制約</span></h3>
+            <ul class="ref-limits">
+              <li><span lang="en"><code>model</code> must be a non-empty String; <code>input</code> and <code>options</code> must be JSON-serializable Hashes (<code>ArgumentError</code>).</span><span lang="ja"><code>model</code> は空でない String、<code>input</code> と <code>options</code> は JSON にできる Hash（違えば <code>ArgumentError</code>）。</span></li>
+              <li><span lang="en">A rejected inference raises <code>Cloudflare::HostError</code>; a non-JSON result or one that doesn't match a helper's shape raises <code>Cloudflare::ProtocolError</code>.</span><span lang="ja">推論の失敗は <code>Cloudflare::HostError</code>、JSON でない結果やヘルパーの想定と違う形の結果は <code>Cloudflare::ProtocolError</code>。</span></li>
+            </ul>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-ai.md" target="_blank" rel="noreferrer">cloudflare-ai.md ↗</a><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/ai-stream" target="_blank" rel="noreferrer">examples/ai-stream ↗</a><a href="https://developers.cloudflare.com/workers-ai/models/" target="_blank" rel="noreferrer">Cloudflare: model catalog ↗</a></p>
+          </section>
+
+          <!-- ============================== VECTORIZE ============================== -->
+          <section class="ref-section" id="vectorize">
+            <p class="ref-kicker">AI</p>
+            <h2>Vectorize</h2>
+            <p class="ref-lede" lang="en">A vector database for semantic search and retrieval-augmented generation. Store embeddings with metadata, then query by vector or by ID.</p>
+            <p class="ref-lede" lang="ja">セマンティック検索や RAG（検索拡張生成）のためのベクトルデータベースです。埋め込みをメタデータと一緒に保存し、ベクトルや ID で検索します。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare::Vectorize</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>vectorize[].binding</code></dd></div>
+              <div><dt><span lang="en">Resolve</span><span lang="ja">取得</span></dt><dd><code>env["cloudflare.env"].VECTOR_INDEX</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Configure</span><span lang="ja">設定</span></h3>
+            <figure class="ref-code"><figcaption>Shell</figcaption><pre><code data-code="sh">npx wrangler vectorize create documents --dimensions=768 --metric=cosine
+npx wrangler vectorize create-metadata-index documents --property-name=category --type=string</code></pre></figure>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "vectorize": [
+    { "binding": "VECTOR_INDEX", "index_name": "documents", "remote": true }
+  ]
+}</code></pre></figure>
+            <p lang="en">The index dimensions must match your embedding model (768 for <code>@cf/baai/bge-base-en-v1.5</code>). Filtering on a metadata property needs a metadata index for it. <code>"remote": true</code> lets <code>wrangler dev</code> use the real index, since Vectorize has no local simulator.</p>
+            <p lang="ja">インデックスの次元数は埋め込みモデルと一致させます（<code>@cf/baai/bge-base-en-v1.5</code> なら 768）。メタデータで絞り込むには、そのプロパティのメタデータインデックスが必要です。Vectorize にはローカル版がないため、<code>"remote": true</code> で <code>wrangler dev</code> から実際のインデックスを使います。</p>
+
+            <h3><span lang="en">Store vectors</span><span lang="ja">ベクトルを保存する</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">cf    = env["cloudflare.env"]
+text  = "PicoRuby is a small Ruby for microcontrollers and WebAssembly."
+vector = cf.AI.embed("@cf/baai/bge-base-en-v1.5", { "text" =&gt; [text] }).first
+
+cf.VECTOR_INDEX.upsert([{
+  "id"        =&gt; "doc-1",
+  "values"    =&gt; vector,
+  "metadata"  =&gt; { "category" =&gt; "ruby", "text" =&gt; text },
+  "namespace" =&gt; "docs",
+}])   # =&gt; {"mutationId" =&gt; "..."}</code></pre></figure>
+            <p lang="en"><code>insert</code> leaves existing IDs untouched; <code>upsert</code> overwrites them. Both return Cloudflare's mutation response. Mutations are applied asynchronously, so a new vector may take a few seconds to show up in queries.</p>
+            <p lang="ja"><code>insert</code> は既存の ID を変更せず、<code>upsert</code> は上書きします。どちらも Cloudflare の mutation レスポンスを返します。変更は非同期に反映されるため、追加したベクトルが検索に出るまで数秒かかることがあります。</p>
+
+            <h3><span lang="en">Query</span><span lang="ja">検索する</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">result = cf.VECTOR_INDEX.query(
+  vector,
+  top_k: 5,
+  return_metadata: :all,
+  namespace: "docs",
+  filter: { "category" =&gt; "ruby" }
+)
+
+sources = result["matches"].map do |match|
+  { "id" =&gt; match["id"], "score" =&gt; match["score"], "text" =&gt; match["metadata"]["text"] }
+end
+
+similar = cf.VECTOR_INDEX.query_by_id("doc-1", top_k: 3)</code></pre></figure>
+            <p lang="en">Results are Cloudflare's JSON as a Hash with <code>"count"</code> and <code>"matches"</code>. <code>return_metadata</code> is <code>:none</code> (default), <code>:indexed</code>, or <code>:all</code>; <code>return_values: true</code> also returns the vectors.</p>
+            <p lang="ja">結果は Cloudflare の JSON をそのまま Hash にしたもので、<code>"count"</code> と <code>"matches"</code> を持ちます。<code>return_metadata</code> は <code>:none</code>（デフォルト）、<code>:indexed</code>、<code>:all</code> のいずれかで、<code>return_values: true</code> を指定するとベクトル自体も返します。</p>
+
+            <h3><span lang="en">Pattern: retrieval-augmented generation</span><span lang="ja">パターン: RAG</span></h3>
+            <figure class="ref-code"><figcaption>Rack</figcaption><pre><code data-code="ruby">def self.answer(env)
+  cf = env["cloudflare.env"]
+  question = JSON.parse(env["rack.input"].read)["question"]
+
+  query_vector = cf.AI.embed("@cf/baai/bge-base-en-v1.5", { "text" =&gt; [question] }).first
+  matches = cf.VECTOR_INDEX.query(query_vector, top_k: 3, return_metadata: :all)["matches"]
+  context = matches.map { |match| match["metadata"]["text"] }.join("\n\n")
+
+  env["cloudflare.hijack"] = cf.AI.generate("@cf/meta/llama-3.1-8b-instruct", {
+    "messages" =&gt; [
+      { "role" =&gt; "system", "content" =&gt; "Answer only from this context:\n\n" + context },
+      { "role" =&gt; "user", "content" =&gt; question },
+    ],
+    "stream" =&gt; true,
+  })
+  [200, { "content-type" =&gt; "text/event-stream" }, []]
+end</code></pre></figure>
+
+            <h3><span lang="en">Inspect and delete</span><span lang="ja">確認と削除</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">cf.VECTOR_INDEX.get_by_ids(["doc-1"])      # =&gt; [{"id" =&gt; "doc-1", "values" =&gt; [...], ...}]
+cf.VECTOR_INDEX.delete_by_ids(["doc-1"])   # =&gt; mutation response
+cf.VECTOR_INDEX.describe                   # =&gt; dimensions, vector count, ...</code></pre></figure>
+
+            <h3>API</h3>
+            <dl class="ref-api">
+              <div><dt><code>query(vector, top_k: 5, return_values: false, return_metadata: :none, namespace: nil, filter: nil)</code> <span class="ref-ret">→ Hash</span></dt><dd lang="en">Nearest neighbours of <code>vector</code> (an Array of numbers).</dd><dd lang="ja"><code>vector</code>（数値の配列）の近傍を検索します。</dd></div>
+              <div><dt><code>query_by_id(id, …)</code> <span class="ref-ret">→ Hash</span></dt><dd lang="en">Same options, using a stored vector as the query.</dd><dd lang="ja">同じオプションで、保存済みのベクトルを検索キーにします。</dd></div>
+              <div><dt><code>insert(vectors)</code>, <code>upsert(vectors)</code> <span class="ref-ret">→ Hash</span></dt><dd lang="en">Arrays of Hashes with <code>"id"</code>, <code>"values"</code>, and optional <code>"metadata"</code> and <code>"namespace"</code>.</dd><dd lang="ja"><code>"id"</code>、<code>"values"</code>、任意の <code>"metadata"</code> と <code>"namespace"</code> を持つ Hash の配列。</dd></div>
+              <div><dt><code>get_by_ids(ids)</code> <span class="ref-ret">→ Array</span>, <code>delete_by_ids(ids)</code> <span class="ref-ret">→ Hash</span>, <code>describe</code> <span class="ref-ret">→ Hash</span></dt><dd lang="en">Fetch or delete by ID, and describe the index.</dd><dd lang="ja">ID での取得・削除と、インデックス情報の取得。</dd></div>
+            </dl>
+
+            <h3><span lang="en">Limits</span><span lang="ja">制約</span></h3>
+            <ul class="ref-limits">
+              <li><span lang="en"><code>top_k</code> is 1–100, or at most 50 with <code>return_values: true</code> or <code>return_metadata: :all</code> (enforced by Cloudflare).</span><span lang="ja"><code>top_k</code> は 1〜100。<code>return_values: true</code> か <code>return_metadata: :all</code> の場合は最大 50（Cloudflare 側で検査）。</span></li>
+              <li><span lang="en">Buffered and JSON-only: requests that can't be serialized raise <code>ArgumentError</code>; responses that aren't JSON raise <code>Cloudflare::ProtocolError</code>.</span><span lang="ja">バッファ型で JSON のみ。シリアライズできないリクエストは <code>ArgumentError</code>、JSON でないレスポンスは <code>Cloudflare::ProtocolError</code>。</span></li>
+            </ul>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-vectorize.md" target="_blank" rel="noreferrer">cloudflare-vectorize.md ↗</a><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/tree/master/examples/rag-stream" target="_blank" rel="noreferrer">examples/rag-stream ↗</a><a href="https://developers.cloudflare.com/vectorize/" target="_blank" rel="noreferrer">Cloudflare: Vectorize ↗</a></p>
+          </section>
+
+          <!-- ============================== QUEUES ============================== -->
+          <section class="ref-section" id="queues">
+            <p class="ref-kicker">MESSAGING</p>
+            <h2>Queues</h2>
+            <p class="ref-lede" lang="en">Move work out of the request. A producer sends UTF-8 text messages; a consumer in the same Worker receives them in batches and acknowledges or retries each one.</p>
+            <p class="ref-lede" lang="ja">処理をリクエストの外へ逃がします。プロデューサが UTF-8 のテキストメッセージを送り、同じ Worker 内のコンシューマがバッチで受け取って、1 件ずつ確定（ack）または再試行（retry）します。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare::Queue</code>, <code>Cloudflare::QueueConsumer::Base</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>queues.producers</code>, <code>queues.consumers</code></dd></div>
+              <div><dt><span lang="en">Resolve</span><span lang="ja">取得</span></dt><dd><code>env["cloudflare.env"].EVENTS_QUEUE</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Configure</span><span lang="ja">設定</span></h3>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "queues": {
+    "producers": [{ "binding": "EVENTS_QUEUE", "queue": "events" }],
+    "consumers": [{ "queue": "events", "max_batch_size": 10 }]
+  }
+}</code></pre></figure>
+
+            <h3><span lang="en">Produce</span><span lang="ja">送信する</span></h3>
+            <figure class="ref-code"><figcaption>Rack</figcaption><pre><code data-code="ruby">class App
+  def self.call(env)
+    event = { "type" =&gt; "signup", "email" =&gt; "alice@example.com" }
+    env["cloudflare.env"].EVENTS_QUEUE.send(JSON.generate(event))
+    [202, { "content-type" =&gt; "text/plain" }, ["queued"]]
+  end
+end</code></pre></figure>
+            <p lang="en"><code>send</code> takes one UTF-8 String and returns <code>nil</code> once the queue has accepted it. Encode structured data as JSON yourself.</p>
+            <p lang="ja"><code>send</code> は UTF-8 の String を 1 つ受け取り、キューが受け付けた時点で <code>nil</code> を返します。構造化データは自分で JSON にエンコードしてください。</p>
+            <div class="ref-note">
+              <b><span lang="en">Note</span><span lang="ja">メモ</span></b>
+              <p lang="en"><code>Queue#send</code> shadows Ruby's <code>Object#send</code> on queue objects. Use <code>__send__</code> or <code>public_send</code> if you need reflection.</p>
+              <p lang="ja">キューオブジェクトでは <code>Queue#send</code> が Ruby の <code>Object#send</code> を隠します。リフレクションが必要なら <code>__send__</code> か <code>public_send</code> を使ってください。</p>
+            </div>
+
+            <h3><span lang="en">Consume</span><span lang="ja">受信する</span></h3>
+            <figure class="ref-code"><figcaption>app.rb</figcaption><pre><code data-code="ruby">class EventConsumer &lt; Cloudflare::QueueConsumer::Base
+  def call(_env)
+    current_batch.messages.each do |message|
+      begin
+        event = JSON.parse(message.body)
+        bindings.DB.query("INSERT INTO events (id, type) VALUES (?1, ?2)", message.id, event["type"]).run
+        message.ack
+      rescue Cloudflare::HostError
+        message.retry(delay_seconds: 30)
+      end
+    end
+  end
+end
+
+Rackup::Handler::CloudflareWorker.run(App)   # HTTP requests
+Cloudflare::Queues.run(EventConsumer)        # queue batches</code></pre></figure>
+            <p lang="en">Register the consumer next to the Rack app in the same program. Inside <code>call</code>, <code>bindings</code> is the <code>Cloudflare::Environment</code> and <code>current_batch</code> the current batch; both are cleared when the batch is done.</p>
+            <p lang="ja">コンシューマは Rack アプリと同じプログラムに並べて登録します。<code>call</code> の中では <code>bindings</code> が <code>Cloudflare::Environment</code>、<code>current_batch</code> が現在のバッチで、どちらもバッチの処理が終わるとクリアされます。</p>
+            <ul class="ref-limits">
+              <li><span lang="en">Returning normally acknowledges every message that was not explicitly retried.</span><span lang="ja">正常に return すると、明示的に retry しなかったメッセージはすべて確定されます。</span></li>
+              <li><span lang="en">Raising an exception makes Cloudflare retry the whole batch.</span><span lang="ja">例外を投げると、Cloudflare がバッチ全体を再試行します。</span></li>
+              <li><span lang="en">Per-message <code>ack</code>/<code>retry</code> take precedence over <code>ack_all</code>/<code>retry_all</code>.</span><span lang="ja">メッセージ単位の <code>ack</code> / <code>retry</code> は <code>ack_all</code> / <code>retry_all</code> より優先されます。</span></li>
+              <li><span lang="en"><code>message.attempts</code> starts at 1 and grows with each delivery — use it to give up on messages that keep failing.</span><span lang="ja"><code>message.attempts</code> は 1 から始まり配信のたびに増えます。失敗し続けるメッセージを諦める判断に使えます。</span></li>
+            </ul>
+
+            <h4><span lang="en">Logging from a consumer</span><span lang="ja">コンシューマからログを出す</span></h4>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">def call(_env)
+  # ... settle messages ...
+  [:info, { "queue" =&gt; current_batch.queue, "count" =&gt; current_batch.messages.size }, "batch processed"]
+end</code></pre></figure>
+            <p lang="en">Returning <code>[level, metadata, message]</code> — level <code>:debug</code>, <code>:info</code>, <code>:warn</code>, or <code>:error</code>, a JSON-serializable Hash, and a String — writes a Worker log. Any other return value is ignored. The return value never settles messages.</p>
+            <p lang="ja"><code>[level, metadata, message]</code>（level は <code>:debug</code> / <code>:info</code> / <code>:warn</code> / <code>:error</code>、JSON にできる Hash、String）を返すと Worker のログに出力されます。それ以外の戻り値は無視されます。戻り値でメッセージが確定されることはありません。</p>
+
+            <h4><span lang="en">Consumer middleware</span><span lang="ja">コンシューマのミドルウェア</span></h4>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">class AuditQueue
+  def initialize(app)
+    @app = app
+  end
+
+  def call(env)
+    # env["cloudflare.batch"] and env["cloudflare.env"] are available here
+    @app.call(env)
+  end
+end
+
+Cloudflare::Queues.run(EventConsumer) do
+  use AuditQueue
+end</code></pre></figure>
+            <p lang="en">Middleware has Rack's callable shape and is built with <code>Rack::Builder</code>, but its env is the queue env (only <code>cloudflare.env</code> and <code>cloudflare.batch</code>), not an HTTP request.</p>
+            <p lang="ja">ミドルウェアは Rack と同じ呼び出し形式で <code>Rack::Builder</code> により組み立てられますが、env は HTTP リクエストではなくキュー用の env（<code>cloudflare.env</code> と <code>cloudflare.batch</code> のみ）です。</p>
+
+            <h3>API</h3>
+            <dl class="ref-api">
+              <div><dt><code>Queue#send(message)</code> <span class="ref-ret">→ nil</span></dt><dd lang="en">Sends one UTF-8 String.</dd><dd lang="ja">UTF-8 の String を 1 件送信します。</dd></div>
+              <div><dt><code>Cloudflare::Queues.run(consumer) { use Middleware }</code></dt><dd lang="en">Registers the batch handler for this Worker.</dd><dd lang="ja">この Worker のバッチハンドラを登録します。</dd></div>
+              <div><dt><code>QueueConsumer::Base#call(env)</code>, <code>current_batch</code>, <code>bindings</code></dt><dd lang="en">Override <code>call</code>; the helpers are available while it runs.</dd><dd lang="ja"><code>call</code> をオーバーライドします。ヘルパーは実行中に使えます。</dd></div>
+              <div><dt><code>Batch#queue</code>, <code>messages</code>, <code>ack_all</code>, <code>retry_all(delay_seconds: nil)</code></dt><dd lang="en">Queue name, messages, and batch-wide settlement.</dd><dd lang="ja">キュー名、メッセージ、バッチ全体の確定・再試行。</dd></div>
+              <div><dt><code>Message#id</code>, <code>timestamp</code>, <code>body</code>, <code>attempts</code>, <code>ack</code>, <code>retry(delay_seconds: nil)</code></dt><dd lang="en"><code>timestamp</code> is milliseconds since the Unix epoch; <code>body</code> is a UTF-8 String.</dd><dd lang="ja"><code>timestamp</code> は Unix エポックからのミリ秒、<code>body</code> は UTF-8 の String。</dd></div>
+            </dl>
+
+            <h3><span lang="en">Limits</span><span lang="ja">制約</span></h3>
+            <ul class="ref-limits">
+              <li><span lang="en">Messages are UTF-8 text of at most 128 KiB, sent one at a time. JSON or byte content types, batch sends, send delays, <code>waitUntil</code>, and metrics are not available yet.</span><span lang="ja">メッセージは最大 128 KiB の UTF-8 テキストで、1 件ずつ送信します。JSON やバイト列のコンテンツタイプ、一括送信、送信時の遅延、<code>waitUntil</code>、メトリクスには未対応です。</span></li>
+              <li><span lang="en"><code>delay_seconds</code> must be a positive Integer (<code>ArgumentError</code>).</span><span lang="ja"><code>delay_seconds</code> は正の Integer（違えば <code>ArgumentError</code>）。</span></li>
+            </ul>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-queue.md" target="_blank" rel="noreferrer">cloudflare-queue.md ↗</a><a href="https://developers.cloudflare.com/queues/" target="_blank" rel="noreferrer">Cloudflare: Queues ↗</a></p>
+          </section>
+
+          <!-- ============================== DURABLE OBJECTS ============================== -->
+          <section class="ref-section" id="durable-objects">
+            <p class="ref-kicker">STATE</p>
+            <h2>Durable Objects</h2>
+            <p class="ref-lede" lang="en">Named, strongly consistent storage. The current adapter treats each named instance as one JSON document: get it, change it in Ruby, and put it back.</p>
+            <p class="ref-lede" lang="ja">名前付きで強い一貫性を持つストレージです。現在のアダプタは、名前ごとのインスタンスを 1 つの JSON ドキュメントとして扱います。取得して Ruby で変更し、書き戻します。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare::DurableObject</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>durable_objects.bindings[].name</code></dd></div>
+              <div><dt><span lang="en">Resolve</span><span lang="ja">取得</span></dt><dd><code>env["cloudflare.env"].OBJECTS</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Configure</span><span lang="ja">設定</span></h3>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "durable_objects": {
+    "bindings": [
+      { "name": "OBJECTS", "class_name": "PicoRubyDurableObject" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["PicoRubyDurableObject"] }
+  ]
+}</code></pre></figure>
+            <figure class="ref-code"><figcaption><span lang="en">Worker entry module</span><span lang="ja">Worker のエントリモジュール</span></figcaption><pre><code data-code="js">export { PicoRubyDurableObject } from "./generated/worker/runtime/index.js";</code></pre></figure>
+            <p lang="en">The Durable Object class comes with the runtime — you don't write it in Ruby. Projects generated by <code>picoruby-cloudflare</code> already export it.</p>
+            <p lang="ja">Durable Object のクラスはランタイムに含まれていて、Ruby で書く必要はありません。<code>picoruby-cloudflare</code> で生成したプロジェクトでは最初から export されています。</p>
+
+            <h3><span lang="en">Read and write documents</span><span lang="ja">ドキュメントを読み書きする</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">store = Cloudflare::DurableObject.from_env(env, "OBJECTS")
+
+store.put("user-1", { "name" =&gt; "Alice", "tags" =&gt; ["ruby"] })
+
+profile = store.get("user-1")   # =&gt; Cloudflare::DurableObject::POJO, or nil
+profile["name"]                 # =&gt; "Alice"
+profile.is_a?(Hash)             # =&gt; true</code></pre></figure>
+            <p lang="en">Each name selects one Durable Object instance, which stores exactly one value. <code>get</code> returns <code>nil</code> if nothing was stored, a <code>POJO</code> (a Hash subclass) for a JSON object, or an Array for a JSON array. Symbol keys are accepted when writing but come back as Strings.</p>
+            <p lang="ja">名前ごとに 1 つの Durable Object インスタンスが選ばれ、そこにちょうど 1 つの値が保存されます。<code>get</code> は何も保存されていなければ <code>nil</code>、JSON オブジェクトなら <code>POJO</code>（Hash のサブクラス）、JSON 配列なら Array を返します。書き込み時は Symbol キーも使えますが、読み戻すと String になります。</p>
+
+            <h3><span lang="en">Custom objects with to_pojo</span><span lang="ja">to_pojo で独自オブジェクトを保存</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">class Cart
+  def initialize(items)
+    @items = items
+  end
+
+  def to_pojo
+    { "items" =&gt; @items, "count" =&gt; @items.size }
+  end
+end
+
+store.put("cart-42", Cart.new(["book", "pen"]))
+store.get("cart-42")["count"]   # =&gt; 2</code></pre></figure>
+
+            <h3><span lang="en">Read-modify-write</span><span lang="ja">読んで、変えて、書き戻す</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">store  = env["cloudflare.env"].OBJECTS
+visits = store.get("page:/home") || { "count" =&gt; 0 }
+visits["count"] += 1
+store.put("page:/home", visits)</code></pre></figure>
+            <div class="ref-note ref-note-warn">
+              <b><span lang="en">Not atomic</span><span lang="ja">アトミックではない</span></b>
+              <p lang="en"><code>get</code> and <code>put</code> are two separate calls. Two requests can read the same value before either writes, and the last write wins. Use D1 (<code>UPDATE … SET count = count + 1</code>) when no update may be lost.</p>
+              <p lang="ja"><code>get</code> と <code>put</code> は別々の呼び出しです。2 つのリクエストがどちらも書き込む前に同じ値を読むことがあり、後の書き込みが勝ちます。更新を失えない場合は D1（<code>UPDATE … SET count = count + 1</code>）を使ってください。</p>
+            </div>
+
+            <h3>API</h3>
+            <dl class="ref-api">
+              <div><dt><code>get(name)</code> <span class="ref-ret">→ POJO | Array | nil</span></dt><dd lang="en">The stored document of the instance called <code>name</code>.</dd><dd lang="ja"><code>name</code> という名前のインスタンスに保存されたドキュメント。</dd></div>
+              <div><dt><code>put(name, value)</code></dt><dd lang="en">Stores a POJO, Hash, Array, or any object responding to <code>to_pojo</code>, replacing the previous value.</dd><dd lang="ja">POJO、Hash、Array、または <code>to_pojo</code> に応答するオブジェクトを保存し、前の値を置き換えます。</dd></div>
+            </dl>
+
+            <h3><span lang="en">Limits</span><span lang="ja">制約</span></h3>
+            <ul class="ref-limits">
+              <li><span lang="en">Values may contain only <code>nil</code>, booleans, Strings, Integers, Floats, Arrays, and Hashes with String or Symbol keys. Other objects and circular references raise <code>ArgumentError</code>.</span><span lang="ja">値に含められるのは <code>nil</code>、真偽値、String、Integer、Float、Array、String か Symbol をキーにした Hash だけです。それ以外のオブジェクトや循環参照は <code>ArgumentError</code>。</span></li>
+              <li><span lang="en">Names are 1–1024 bytes; payloads are at most 1 MiB.</span><span lang="ja">名前は 1〜1024 バイト、ペイロードは最大 1 MiB。</span></li>
+              <li><span lang="en">Only get/put of one JSON value per instance is exposed. Custom Durable Object classes, alarms, WebSockets, and the storage API are not.</span><span lang="ja">公開されているのはインスタンスごとに 1 つの JSON 値の get / put だけです。独自の Durable Object クラス、アラーム、WebSocket、ストレージ API は使えません。</span></li>
+            </ul>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-durable-object.md" target="_blank" rel="noreferrer">cloudflare-durable-object.md ↗</a><a href="https://developers.cloudflare.com/durable-objects/" target="_blank" rel="noreferrer">Cloudflare: Durable Objects ↗</a></p>
+          </section>
+
+          <!-- ============================== ACCESS ============================== -->
+          <section class="ref-section" id="access">
+            <p class="ref-kicker">IDENTITY</p>
+            <h2>Cloudflare Access</h2>
+            <p class="ref-lede" lang="en">Rack middleware that looks up the signed-in Cloudflare Access user and puts their identity in <code>env["cloudflare.identity"]</code>.</p>
+            <p class="ref-lede" lang="ja">Cloudflare Access でサインインしているユーザーを問い合わせ、その情報を <code>env["cloudflare.identity"]</code> に入れる Rack ミドルウェアです。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Rack::Cloudflare::Access</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd><code>vars.CF_ACCESS_TEAM</code></dd></div>
+              <div><dt>Rack env</dt><dd><code>env["cloudflare.identity"]</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Configure</span><span lang="ja">設定</span></h3>
+            <figure class="ref-code"><figcaption>wrangler.jsonc</figcaption><pre><code data-code="jsonc">{
+  "vars": { "CF_ACCESS_TEAM": "my-team" }
+}</code></pre></figure>
+            <p lang="en">Put the Worker behind an Access application first. The team name is the <code>my-team</code> in <code>my-team.cloudflareaccess.com</code>, not a URL.</p>
+            <p lang="ja">まず Worker を Access アプリケーションで保護してください。チーム名は <code>my-team.cloudflareaccess.com</code> の <code>my-team</code> の部分で、URL ではありません。</p>
+
+            <h3><span lang="en">Protect an app</span><span lang="ja">アプリを保護する</span></h3>
+            <figure class="ref-code"><figcaption>app.rb</figcaption><pre><code data-code="ruby">app = Rack::Builder.new do
+  use Rack::Cloudflare::Access   # reads CF_ACCESS_TEAM; or pass team: "my-team"
   run lambda { |env|
     identity = env["cloudflare.identity"]
-    [200, { "content-type" =&gt; "text/plain" }, [identity.email]]
+    [200, { "content-type" =&gt; "text/plain" }, ["Hello, #{identity.email}"]]
   }
 end
 
-Rackup::Handler::CloudflareWorker.run(app)</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="access.limit">This fetches and decodes the Access identity response; it does not locally validate JWT signatures, issuer, expiry, or audience, and it does not implement service-token authentication.</span></div>
-            <a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-access.md" target="_blank" rel="noreferrer">cloudflare-access.md ↗</a>
-          </article>
+Rackup::Handler::CloudflareWorker.run(app)</code></pre></figure>
+            <p lang="en">On every request the middleware reads the <code>CF_Authorization</code> cookie, asks Access for the identity, and calls your app only on success. Identities are never cached between requests. Otherwise it answers itself:</p>
+            <p lang="ja">ミドルウェアはリクエストごとに <code>CF_Authorization</code> Cookie を読み、Access にユーザー情報を問い合わせ、成功した場合だけアプリを呼びます。ユーザー情報はリクエスト間でキャッシュされません。失敗時はミドルウェア自身が応答します。</p>
+            <div class="ref-table-wrap">
+              <table class="ref-table">
+                <thead><tr><th><span lang="en">Status</span><span lang="ja">ステータス</span></th><th><span lang="en">When</span><span lang="ja">条件</span></th></tr></thead>
+                <tbody>
+                  <tr><td><code>503</code></td><td><span lang="en">The team name is missing or invalid.</span><span lang="ja">チーム名が未設定、または不正。</span></td></tr>
+                  <tr><td><code>401</code></td><td><span lang="en">No or malformed cookie, or Access answered 401/403.</span><span lang="ja">Cookie がない・不正、または Access が 401/403 を返した。</span></td></tr>
+                  <tr><td><code>502</code></td><td><span lang="en">Network error, another HTTP status, or invalid identity JSON.</span><span lang="ja">ネットワークエラー、その他の HTTP ステータス、または不正なユーザー情報 JSON。</span></td></tr>
+                </tbody>
+              </table>
+            </div>
 
-          <article class="guide-card" id="fetch-crypto">
-            <div class="guide-card-heading"><span>10 / HOST UTILITIES</span><h2 data-guide-i18n="utility.title">Fetch and Web Crypto</h2><p data-guide-i18n="utility.body">Call HTTP(S) through the Worker host, and use the browser-compatible Web Crypto API for secure random bytes and AES-GCM.</p></div>
-            <pre><code>response = Cloudflare.fetch("https://example.com/api",
-  method: "POST", body: "hello")
+            <h3><span lang="en">The identity object</span><span lang="ja">ユーザー情報オブジェクト</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">identity = env["cloudflare.identity"]   # Cloudflare::AccessIdentity
+identity.email       # =&gt; "alice@example.com"
+identity.user_uuid   # =&gt; "8c6a..."
+identity.raw_data    # =&gt; the full identity JSON (groups, idp, ...)</code></pre></figure>
 
-secret = SecureRandom.random_bytes(32)
-iv, encrypted = Crypto.encrypt(:AES_GCM, secret, "private data")
-plain = Crypto.decrypt(:AES_GCM, secret, iv, encrypted)</code></pre>
-            <div class="guide-limit"><b data-guide-i18n="limit.boundary">Boundary</b><span data-guide-i18n="utility.limit">Fetch is buffered UTF-8 text only: no credentials in URLs, no redirects, a 10-second timeout, and a 1 MiB response cap. AES-GCM supports 16-, 24-, or 32-byte raw keys.</span></div>
-            <div class="guide-doc-links"><a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-fetch.md" target="_blank" rel="noreferrer">cloudflare-fetch.md ↗</a><a class="guide-doc-link" href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/web-crypto.md" target="_blank" rel="noreferrer">web-crypto.md ↗</a></div>
-          </article>
+            <h3><span lang="en">Calling it directly</span><span lang="ja">直接呼び出す</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">token = Rack::Request.new(env).cookies["CF_Authorization"]
+
+begin
+  identity = Cloudflare::Access.get_identity(token, team: "my-team")
+rescue Cloudflare::Access::Unauthorized
+  # Access answered 401 or 403
+end</code></pre></figure>
+            <div class="ref-note ref-note-warn">
+              <b><span lang="en">Security</span><span lang="ja">セキュリティ</span></b>
+              <p lang="en">This decodes the identity that Access returns. It does not verify the JWT signature, issuer, audience, or expiry locally, and service tokens are not supported. Keep the Access application in front of the Worker, and add token validation if your deployment requires it.</p>
+              <p lang="ja">これは Access が返したユーザー情報をデコードするだけです。JWT の署名・発行者・audience・有効期限をローカルで検証することはなく、サービストークンにも対応していません。Worker の前段に Access アプリケーションを置いたままにし、必要ならトークン検証を追加してください。</p>
+            </div>
+
+            <h3>API</h3>
+            <dl class="ref-api">
+              <div><dt><code>use Rack::Cloudflare::Access, team: nil</code></dt><dd lang="en">Without <code>team:</code>, reads <code>CF_ACCESS_TEAM</code> on each request. Alias of <code>Cloudflare::Access</code>, defined when Rack is loaded.</dd><dd lang="ja"><code>team:</code> を省略するとリクエストごとに <code>CF_ACCESS_TEAM</code> を読みます。<code>Cloudflare::Access</code> の別名で、Rack が読み込まれているときに定義されます。</dd></div>
+              <div><dt><code>Cloudflare::Access.get_identity(token, team:)</code> <span class="ref-ret">→ AccessIdentity</span></dt><dd lang="en">Raises <code>ArgumentError</code>, <code>Cloudflare::Access::Unauthorized</code>, <code>Cloudflare::HostError</code>, or <code>Cloudflare::ProtocolError</code>.</dd><dd lang="ja"><code>ArgumentError</code>、<code>Cloudflare::Access::Unauthorized</code>、<code>Cloudflare::HostError</code>、<code>Cloudflare::ProtocolError</code> を投げます。</dd></div>
+              <div><dt><code>AccessIdentity#email</code>, <code>user_uuid</code>, <code>raw_data</code></dt><dd lang="en">Convenience readers and the full JSON Hash.</dd><dd lang="ja">よく使う値と、JSON 全体の Hash。</dd></div>
+            </dl>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-access.md" target="_blank" rel="noreferrer">cloudflare-access.md ↗</a><a href="https://developers.cloudflare.com/cloudflare-one/access-controls/applications/http-apps/authorization-cookie/application-token/" target="_blank" rel="noreferrer">Cloudflare: Access identity ↗</a></p>
+          </section>
+
+          <!-- ============================== FETCH ============================== -->
+          <section class="ref-section" id="fetch">
+            <p class="ref-kicker">HOST API</p>
+            <h2>Fetch</h2>
+            <p class="ref-lede" lang="en">Outbound HTTP(S) through the Worker's own <code>fetch</code>. Request and response bodies are buffered UTF-8 text.</p>
+            <p class="ref-lede" lang="ja">Worker 自身の <code>fetch</code> を使った外向きの HTTP(S) 通信です。リクエストとレスポンスのボディはバッファされた UTF-8 テキストです。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>Cloudflare.fetch</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd>—</dd></div>
+              <div><dt><span lang="en">Returns</span><span lang="ja">戻り値</span></dt><dd><code>Cloudflare::FetchResponse</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Call a JSON API</span><span lang="ja">JSON API を呼ぶ</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">token = ENV.fetch("API_TOKEN")
+
+response = Cloudflare.fetch(
+  "https://api.example.com/v1/items",
+  method: "POST",
+  headers: {
+    "authorization" =&gt; "Bearer #{token}",
+    "content-type" =&gt; "application/json",
+  },
+  body: JSON.generate({ "name" =&gt; "PicoRuby" })
+)
+
+if response.status == 201
+  item = JSON.parse(response.body)
+else
+  # HTTP error statuses are returned, not raised
+end</code></pre></figure>
+
+            <h3><span lang="en">The response</span><span lang="ja">レスポンス</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">response = Cloudflare.fetch("https://example.com/")
+response.status                    # =&gt; 200
+response.headers["content-type"]   # =&gt; "text/html; charset=utf-8" — names are lowercase
+response.body                      # =&gt; "&lt;!doctype html&gt;..."</code></pre></figure>
+
+            <h3>API</h3>
+            <dl class="ref-api">
+              <div><dt><code>Cloudflare.fetch(url, method: "GET", headers: {}, body: nil)</code> <span class="ref-ret">→ FetchResponse</span></dt><dd lang="en">Method and header values are Strings; <code>body</code> is a String or <code>nil</code>.</dd><dd lang="ja">メソッドとヘッダ値は String、<code>body</code> は String か <code>nil</code>。</dd></div>
+              <div><dt><code>FetchResponse#status</code>, <code>headers</code>, <code>body</code></dt><dd lang="en">Integer status, Hash of lowercase header names, and the body String.</dd><dd lang="ja">Integer のステータス、小文字のヘッダ名をキーにした Hash、ボディの String。</dd></div>
+            </dl>
+
+            <h3><span lang="en">Limits</span><span lang="ja">制約</span></h3>
+            <ul class="ref-limits">
+              <li><span lang="en"><code>http://</code> and <code>https://</code> URLs only, without embedded credentials, at most 8192 bytes.</span><span lang="ja"><code>http://</code> と <code>https://</code> の URL のみ。認証情報の埋め込みは不可、最大 8192 バイト。</span></li>
+              <li><span lang="en">Redirects are not followed: any 3xx response raises <code>Cloudflare::HostError</code>.</span><span lang="ja">リダイレクトは追いません。3xx のレスポンスは <code>Cloudflare::HostError</code> になります。</span></li>
+              <li><span lang="en">10-second timeout; response bodies up to 1 MiB; encoded options up to 1 MiB.</span><span lang="ja">タイムアウトは 10 秒。レスポンスボディは最大 1 MiB、エンコード後のオプションも最大 1 MiB。</span></li>
+              <li><span lang="en">UTF-8 text only — no binary or streaming bodies. Invalid UTF-8 raises <code>Cloudflare::ProtocolError</code>. Error messages never contain URLs, credentials, or bodies.</span><span lang="ja">UTF-8 テキストのみで、バイナリやストリーミングのボディには未対応。不正な UTF-8 は <code>Cloudflare::ProtocolError</code>。エラーメッセージに URL・認証情報・ボディは含まれません。</span></li>
+            </ul>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/cloudflare-fetch.md" target="_blank" rel="noreferrer">cloudflare-fetch.md ↗</a><a href="https://developers.cloudflare.com/workers/runtime-apis/fetch/" target="_blank" rel="noreferrer">Cloudflare: fetch ↗</a></p>
+          </section>
+
+          <!-- ============================== CRYPTO ============================== -->
+          <section class="ref-section" id="crypto">
+            <p class="ref-kicker">HOST API</p>
+            <h2>Web Crypto</h2>
+            <p class="ref-lede" lang="en">Cryptographically secure randomness and AES-GCM from the Workers Web Crypto API — not a PicoRuby pseudo-random generator.</p>
+            <p class="ref-lede" lang="ja">Workers の Web Crypto API による暗号論的に安全な乱数と AES-GCM です。PicoRuby の疑似乱数ではありません。</p>
+            <dl class="ref-facts">
+              <div><dt>Ruby</dt><dd><code>SecureRandom</code>, <code>Crypto</code></dd></div>
+              <div><dt>wrangler.jsonc</dt><dd>—</dd></div>
+              <div><dt><span lang="en">Algorithm</span><span lang="ja">アルゴリズム</span></dt><dd><code>:AES_GCM</code></dd></div>
+            </dl>
+
+            <h3><span lang="en">Random values</span><span lang="ja">乱数</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">SecureRandom.random_bytes       # =&gt; 16 random bytes (binary String)
+SecureRandom.random_bytes(32)   # =&gt; 32 random bytes
+SecureRandom.hex(16)            # =&gt; "3f9c0a..." — 32 hex characters
+SecureRandom.random_number      # =&gt; Float in [0.0, 1.0)</code></pre></figure>
+
+            <h3><span lang="en">Encrypt and decrypt</span><span lang="ja">暗号化と復号</span></h3>
+            <figure class="ref-code"><figcaption>Ruby</figcaption><pre><code data-code="ruby">key = [ENV.fetch("DATA_KEY_HEX")].pack("H*")   # 64 hex characters =&gt; 32-byte AES-256 key
+
+iv, ciphertext = Crypto.encrypt(:AES_GCM, key, "private data")
+plain = Crypto.decrypt(:AES_GCM, key, iv, ciphertext)   # =&gt; "private data"</code></pre></figure>
+            <p lang="en"><code>encrypt</code> generates a fresh 12-byte IV on every call and returns it with the ciphertext, which includes the 16-byte authentication tag. Store both. <code>decrypt</code> raises <code>RuntimeError</code> if the key, IV, or ciphertext was altered.</p>
+            <p lang="ja"><code>encrypt</code> は呼び出しごとに新しい 12 バイトの IV を生成し、16 バイトの認証タグを含む暗号文と一緒に返します。両方を保存してください。鍵・IV・暗号文のいずれかが改変されていると、<code>decrypt</code> は <code>RuntimeError</code> を投げます。</p>
+            <div class="ref-note">
+              <b><span lang="en">Key management</span><span lang="ja">鍵の管理</span></b>
+              <p lang="en">Keys are raw bytes. Generate one once — for example <code>openssl rand -hex 32 | npx wrangler secret put DATA_KEY_HEX</code> — and decode it as above. A key created per request cannot decrypt anything on the next request.</p>
+              <p lang="ja">鍵は生のバイト列です。一度だけ生成して（例: <code>openssl rand -hex 32 | npx wrangler secret put DATA_KEY_HEX</code>）、上のようにデコードして使います。リクエストごとに作った鍵では、次のリクエストで何も復号できません。</p>
+            </div>
+
+            <h3>API</h3>
+            <dl class="ref-api">
+              <div><dt><code>SecureRandom.random_bytes(n = 16)</code> <span class="ref-ret">→ String</span>, <code>SecureRandom.hex(n = 16)</code> <span class="ref-ret">→ String</span></dt><dd lang="en"><code>n</code> random bytes, or <code>2n</code> hexadecimal characters.</dd><dd lang="ja"><code>n</code> バイトの乱数、または <code>2n</code> 文字の 16 進文字列。</dd></div>
+              <div><dt><code>SecureRandom.random_number</code> <span class="ref-ret">→ Float</span></dt><dd lang="en">Uniform in [0.0, 1.0). Takes no arguments.</dd><dd lang="ja">[0.0, 1.0) の一様乱数。引数は取りません。</dd></div>
+              <div><dt><code>Crypto.encrypt(:AES_GCM, key, plaintext)</code> <span class="ref-ret">→ [iv, ciphertext]</span></dt><dd lang="en"><code>key</code> is 16, 24, or 32 raw bytes.</dd><dd lang="ja"><code>key</code> は 16・24・32 バイトの生の鍵。</dd></div>
+              <div><dt><code>Crypto.decrypt(:AES_GCM, key, iv, ciphertext)</code> <span class="ref-ret">→ String</span></dt><dd lang="en">The plaintext, or <code>RuntimeError</code> when authentication fails.</dd><dd lang="ja">平文。認証に失敗すると <code>RuntimeError</code>。</dd></div>
+            </dl>
+            <p class="ref-links"><a href="https://github.com/udzura/picoruby-cloudflare-worker-wasm/blob/master/docs/web-crypto.md" target="_blank" rel="noreferrer">web-crypto.md ↗</a><a href="https://developers.cloudflare.com/workers/runtime-apis/web-crypto/" target="_blank" rel="noreferrer">Cloudflare: Web Crypto ↗</a></p>
+          </section>
         </div>
-      </section>
+      </div>
     </main>
 
     <footer>
       <a class="brand" href="/"><span class="brand-mark" aria-hidden="true">P</span><span>PicoRuby <i>×</i> Workers</span></a>
-      <p data-guide-i18n="footer.note">A practical companion to the runtime documentation.</p>
-      <a href="#main"><span data-guide-i18n="footer.top">Back to top</span> ↑</a>
+      <p><span lang="en">A practical companion to the runtime documentation.</span><span lang="ja">ランタイムのドキュメントを実践的に読むためのリファレンス。</span></p>
+      <a href="#main"><span lang="en">Back to top</span><span lang="ja">ページ先頭へ</span> ↑</a>
     </footer>
 
     <script src="/app.js" defer></script>

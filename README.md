@@ -11,8 +11,16 @@ python3 -m http.server 4173 --directory dist
 
 Open <http://localhost:4173/>.
 
-The landing page links to the bilingual [binding guide](http://localhost:4173/bindings.html),
+The landing page links to the bilingual [binding reference](http://localhost:4173/bindings.html),
 which is also available directly at `/bindings.html` after deployment.
+
+In `bindings.html`, every piece of prose is written twice, as sibling elements
+with `lang="en"` and `lang="ja"`; `styles.css` hides the inactive language.
+Code samples are shared. Mark code blocks as
+`<figure class="ref-code"><figcaption>…</figcaption><pre><code data-code="ruby">`
+(`ruby`, `jsonc`, `js`, or `sh`) and `guide.js` adds highlighting and a copy
+button. New sections need an `id`, the `ref-section` class, and a matching
+link in the sidebar nav.
 
 ## Deploy to Cloudflare Pages
 
